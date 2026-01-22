@@ -97,13 +97,17 @@ async function salvarEquipe() {
   const nome = document.getElementById("nomeEquipe").value.trim();
   const integrantes = document.getElementById("integrantes").value.trim();
 
-  const processos = [...document.querySelectorAll(".processos input:checked")]
-    .map(c => c.value);
+  const processoSelecionado =
+    document.querySelector('.processos input:checked')?.value;
 
-  if (!nome || !integrantes || processos.length === 0) {
-    alert("Preencha o nome, integrantes e selecione ao menos um processo.");
-    return;
-  }
+
+  const { error } = await supabase
+  .from("equipes_producao")
+  .insert([{
+    nome,
+    integrantes,
+    processos: processoSelecionado
+  }]);
 
   const { error } = await supabase
     .from("equipes_producao")

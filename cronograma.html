@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Cronograma de Produção</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: #fff;
+  border: 1px solid #cfcfcf;
+  padding: 20px;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+label {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+input, select {
+  width: 100%;
+  padding: 6px;
+  font-size: 13px;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px;
+  width: 100%;
+  font-size: 14px;
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Cadastro de Cronograma por Estrutura</h2>
+
+  <div class="grid">
+    <div>
+      <label>Fábrica</label>
+      <input id="fabrica">
+    </div>
+
+    <div>
+      <label>Fornecedor</label>
+      <input id="fornecedor">
+    </div>
+
+    <div>
+      <label>Obra</label>
+      <select id="obra"></select>
+    </div>
+
+    <div>
+      <label>Instalação</label>
+      <select id="instalacao"></select>
+    </div>
+
+    <div>
+      <label>Estrutura</label>
+      <select id="estrutura"></select>
+    </div>
+
+    <div>
+      <label>Duração Planejada (dias úteis)</label>
+      <input type="number" id="duracao" min="1">
+    </div>
+  </div>
+
+  <button onclick="salvarCronograma()">Salvar Cronograma</button>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
+/* ===============================
+   CARREGAR ESTRUTURAS EXISTENTES
+=============================== */
+async function carregarEstruturas() {
+  const { data } = await supabase
+    .from("grupos_producao")
+    .select("obra, instalacao, estrutura");
+
+  preencherSelect("obra", [...new Set(data.map(d => d.obra))]);
+  preencherSelect("instalacao", [...new Set(data.map(d => d.instalacao))]);
+  preencherSelect("estrutura", [...new Set(data.map(d => d.estrutura))]);
+}
+
+function preencherSelect(id, valores) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">Selecione</option>';
+  valores.filter(v => v).forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+/* ===============================
+   SALVAR CRONOGRAMA
+=============================== */
+async function salvarCronograma() {
+  const registro = {
+    fabrica: fabrica.value,
+    fornecedor: fornecedor.value,
+    obra: obra.value,
+    instalacao: instalacao.value,
+    estrutura: estrutura.value,
+    duracao_planejada_dias: Number(duracao.value)
+  };
+
+  if (!registro.fabrica || !registro.fornecedor ||
+      !registro.obra || !registro.instalacao ||
+      !registro.estrutura || !registro.duracao_planejada_dias) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("cronograma_estrutura")
+    .insert([registro]);
+
+  if (error) {
+    alert("Erro ao salvar: " + error.message);
+    return;
+  }
+
+  alert("Cronograma cadastrado com sucesso!");
+
+  document.querySelectorAll("input, select").forEach(e => e.value = "");
+}
+
+carregarEstruturas();
+</script>
+
+</body>
+</html>

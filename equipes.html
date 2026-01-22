@@ -11,98 +11,63 @@ body {
   background: #f2f2f2;
   margin: 20px;
 }
-
-h2 { margin-bottom: 10px; }
-
 .bloco {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #cfcfcf;
   padding: 12px;
-  margin-bottom: 15px;
+  max-width: 700px;
+  margin: auto;
 }
-
 label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: bold;
 }
-
 input, textarea {
   width: 100%;
   padding: 6px;
   font-size: 13px;
-  border: 1px solid #bfbfbf;
-  box-sizing: border-box;
+  margin-bottom: 10px;
 }
-
-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
 .processos {
   display: flex;
-  flex-wrap: wrap;
   gap: 15px;
-  margin-top: 10px;
+  margin: 10px 0;
 }
-
-.processos label {
-  font-weight: normal;
-}
-
-.botoes {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
 button {
   padding: 10px;
   font-size: 14px;
-  cursor: pointer;
   border: none;
+  cursor: pointer;
   color: #fff;
+  background: #2e7d32;
 }
-
-.btn-salvar { background: #2e7d32; }
 </style>
 </head>
 
 <body>
 
-<h2>Cadastro de Equipes de Produção</h2>
+<h2 style="text-align:center">Cadastro de Equipes de Produção</h2>
 
 <div class="bloco">
-
   <label>Nome da Equipe</label>
-  <input id="nomeEquipe">
+  <input id="equipe">
 
-  <br><br>
+  <label>Integrantes (separar por vírgula)</label>
+  <textarea id="integrantes" rows="3"></textarea>
 
-  <label>Integrantes</label>
-  <textarea id="integrantes"
-    placeholder="Ex: João, Carlos, Pedro"></textarea>
-
-  <br><br>
-
-  <label>Processos que a equipe executa</label>
+  <label>Processos Atendidos</label>
   <div class="processos">
-    <label><input type="checkbox" id="montagem"> Montagem</label>
-    <label><input type="checkbox" id="soldagem"> Soldagem</label>
-    <label><input type="checkbox" id="acabamento"> Acabamento</label>
-    <label><input type="checkbox" id="pintura"> Pintura</label>
-    <label><input type="checkbox" checked disabled> Envio</label>
+    <label><input type="checkbox" value="Montagem"> Montagem</label>
+    <label><input type="checkbox" value="Soldagem"> Soldagem</label>
+    <label><input type="checkbox" value="Acabamento"> Acabamento</label>
+    <label><input type="checkbox" value="Pintura"> Pintura</label>
   </div>
 
-  <div class="botoes">
-    <button class="btn-salvar" onclick="salvarEquipe()">Salvar Equipe</button>
-  </div>
-
+  <button onclick="salvarEquipe()">Salvar Equipe</button>
 </div>
 
 <script type="module">
-import { createClient } from
-"https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const supabase = createClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
@@ -110,38 +75,33 @@ const supabase = createClient(
 );
 
 async function salvarEquipe() {
+  const nome = equipe.value.trim();
+  const membros = integrantes.value.trim();
+  const processos = [...document.querySelectorAll(".processos input:checked")]
+    .map(c => c.value);
 
-  if (!nomeEquipe.value) {
-    alert("Informe o nome da equipe.");
+  if (!nome || !membros || processos.length === 0) {
+    alert("Preencha todos os campos.");
     return;
   }
 
-  const dados = {
-    nome: nomeEquipe.value,
-    integrantes: integrantes.value,
-    montagem: montagem.checked,
-    soldagem: soldagem.checked,
-    acabamento: acabamento.checked,
-    pintura: pintura.checked,
-    envio: true
-  };
-
   const { error } = await supabase
-    .from("equipes")
-    .insert([dados]);
+    .from("equipes_producao")
+    .insert({
+      equipe: nome,
+      integrantes: membros,
+      processos: processos.join(";")
+    });
 
   if (error) {
-    alert("Erro ao salvar: " + error.message);
+    alert(error.message);
     return;
   }
 
   alert("Equipe cadastrada com sucesso!");
-
-  document.querySelectorAll("input, textarea")
-    .forEach(el => {
-      if (el.type === "checkbox") el.checked = false;
-      else el.value = "";
-    });
+  equipe.value = "";
+  integrantes.value = "";
+  document.querySelectorAll(".processos input").forEach(c => c.checked = false);
 }
 </script>
 

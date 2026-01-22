@@ -9,82 +9,77 @@
 body {
   font-family: Arial, sans-serif;
   background: #f2f2f2;
-  margin: 20px;
+  padding: 30px;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  background: #ffffff;
+  border: 1px solid #cfcfcf;
+  padding: 20px;
 }
 
 h2 {
-  margin-bottom: 10px;
-}
-
-.bloco {
-  background: #ffffff;
-  border: 1px solid #cfcfcf;
-  padding: 12px;
-  max-width: 600px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 label {
-  font-size: 12px;
   font-weight: bold;
-  display: block;
-  margin-top: 10px;
+  font-size: 13px;
 }
 
 input, textarea {
   width: 100%;
-  padding: 6px;
+  padding: 8px;
   font-size: 13px;
-  border: 1px solid #bfbfbf;
+  margin-bottom: 10px;
   box-sizing: border-box;
 }
 
 textarea {
   resize: vertical;
-  min-height: 80px;
 }
 
 .processos {
   display: flex;
   gap: 20px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  margin: 10px 0 20px 0;
 }
 
 .processos label {
   font-weight: normal;
-  font-size: 13px;
 }
 
 button {
-  margin-top: 15px;
   padding: 10px 20px;
+  background: #2e7d32;
+  color: white;
+  border: none;
   font-size: 14px;
   cursor: pointer;
-  border: none;
-  background: #2e7d32;
-  color: #fff;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Cadastro de Equipes de Produção</h2>
+<div class="container">
+  <h2>Cadastro de Equipes de Produção</h2>
 
-<div class="bloco">
   <label>Nome da Equipe</label>
-  <input id="equipe" placeholder="Ex: Equipe Montagem 1">
+  <input id="nomeEquipe" placeholder="Ex: Equipe Soldagem A">
 
-  <label>Integrantes (um por linha)</label>
-  <textarea id="integrantes" placeholder="Nome 1&#10;Nome 2&#10;Nome 3"></textarea>
+  <label>Integrantes (separar por vírgula)</label>
+  <textarea id="integrantes" rows="3" placeholder="João, Carlos, Maria"></textarea>
 
-  <label>Processos atendidos</label>
+  <label>Processos Atendidos</label>
   <div class="processos">
     <label><input type="checkbox" value="Montagem"> Montagem</label>
     <label><input type="checkbox" value="Soldagem"> Soldagem</label>
     <label><input type="checkbox" value="Acabamento"> Acabamento</label>
     <label><input type="checkbox" value="Pintura"> Pintura</label>
-    <label><input type="checkbox" value="Envio" checked disabled> Envio</label>
   </div>
 
   <button id="btnSalvar">Salvar Equipe</button>
@@ -93,69 +88,47 @@ button {
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* ===== SUPABASE ===== */
 const supabase = createClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
   "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
 
-/* ===== ELEMENTOS ===== */
-const btnSalvar = document.getElementById("btnSalvar");
-const campoEquipe = document.getElementById("equipe");
-const campoIntegrantes = document.getElementById("integrantes");
-
-/* ===== EVENTO ===== */
-btnSalvar.addEventListener("click", salvarEquipe);
-
-/* ===== FUNÇÃO ===== */
 async function salvarEquipe() {
-  const nomeEquipe = campoEquipe.value.trim();
-  const integrantes = campoIntegrantes.value.trim();
+  const nome = document.getElementById("nomeEquipe").value.trim();
+  const integrantes = document.getElementById("integrantes").value.trim();
 
-  const processosSelecionados = [
-    ...document.querySelectorAll(".processos input:checked")
-  ].map(p => p.value);
+  const processos = [...document.querySelectorAll(".processos input:checked")]
+    .map(c => c.value);
 
-  if (!nomeEquipe) {
-    alert("Informe o nome da equipe.");
-    return;
-  }
-
-  if (!integrantes) {
-    alert("Informe os integrantes da equipe.");
-    return;
-  }
-
-  if (processosSelecionados.length === 0) {
-    alert("Selecione ao menos um processo.");
+  if (!nome || !integrantes || processos.length === 0) {
+    alert("Preencha o nome, integrantes e selecione ao menos um processo.");
     return;
   }
 
   const { error } = await supabase
     .from("equipes_producao")
-    .insert({
-      equipe: nomeEquipe,
-      integrantes: integrantes,
-      processos: processosSelecionados.join(";")
-    });
+    .insert([{
+      nome,
+      integrantes,
+      processos: processos.join(";")
+    }]);
 
   if (error) {
-    alert("Erro ao salvar equipe:\n" + error.message);
-    console.error(error);
+    alert("Erro ao salvar equipe: " + error.message);
     return;
   }
 
   alert("Equipe cadastrada com sucesso!");
 
-  /* LIMPAR FORMULÁRIO */
-  campoEquipe.value = "";
-  campoIntegrantes.value = "";
-  document
-    .querySelectorAll(".processos input")
-    .forEach(c => {
-      if (!c.disabled) c.checked = false;
-    });
+  // Limpar campos
+  document.getElementById("nomeEquipe").value = "";
+  document.getElementById("integrantes").value = "";
+  document.querySelectorAll(".processos input").forEach(c => c.checked = false);
 }
+
+document
+  .getElementById("btnSalvar")
+  .addEventListener("click", salvarEquipe);
 </script>
 
 </body>

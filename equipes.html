@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Cadastro de Equipes de Produção</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  margin: 20px;
+}
+
+h2 { margin-bottom: 10px; }
+
+.bloco {
+  background: #ffffff;
+  border: 1px solid #cfcfcf;
+  padding: 12px;
+  margin-bottom: 15px;
+}
+
+label {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 6px;
+  font-size: 13px;
+  border: 1px solid #bfbfbf;
+  box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.processos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.processos label {
+  font-weight: normal;
+}
+
+.botoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+button {
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  color: #fff;
+}
+
+.btn-salvar { background: #2e7d32; }
+</style>
+</head>
+
+<body>
+
+<h2>Cadastro de Equipes de Produção</h2>
+
+<div class="bloco">
+
+  <label>Nome da Equipe</label>
+  <input id="nomeEquipe">
+
+  <br><br>
+
+  <label>Integrantes</label>
+  <textarea id="integrantes"
+    placeholder="Ex: João, Carlos, Pedro"></textarea>
+
+  <br><br>
+
+  <label>Processos que a equipe executa</label>
+  <div class="processos">
+    <label><input type="checkbox" id="montagem"> Montagem</label>
+    <label><input type="checkbox" id="soldagem"> Soldagem</label>
+    <label><input type="checkbox" id="acabamento"> Acabamento</label>
+    <label><input type="checkbox" id="pintura"> Pintura</label>
+    <label><input type="checkbox" checked disabled> Envio</label>
+  </div>
+
+  <div class="botoes">
+    <button class="btn-salvar" onclick="salvarEquipe()">Salvar Equipe</button>
+  </div>
+
+</div>
+
+<script type="module">
+import { createClient } from
+"https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
+async function salvarEquipe() {
+
+  if (!nomeEquipe.value) {
+    alert("Informe o nome da equipe.");
+    return;
+  }
+
+  const dados = {
+    nome: nomeEquipe.value,
+    integrantes: integrantes.value,
+    montagem: montagem.checked,
+    soldagem: soldagem.checked,
+    acabamento: acabamento.checked,
+    pintura: pintura.checked,
+    envio: true
+  };
+
+  const { error } = await supabase
+    .from("equipes")
+    .insert([dados]);
+
+  if (error) {
+    alert("Erro ao salvar: " + error.message);
+    return;
+  }
+
+  alert("Equipe cadastrada com sucesso!");
+
+  document.querySelectorAll("input, textarea")
+    .forEach(el => {
+      if (el.type === "checkbox") el.checked = false;
+      else el.value = "";
+    });
+}
+</script>
+
+</body>
+</html>

@@ -1,8 +1,8 @@
 /*********************************
- * SUPABASE (DECLARAÇÃO ÚNICA)
+ * SUPABASE
  *********************************/
 const supabaseUrl = "https://dkmejmovtcdalcinhu.supabase.co";
-const supabaseKey = "SUA_PUBLISHABLE_KEY_AQUI"; // mantenha a anon/publishable
+const supabaseKey = "SUA_PUBLISHABLE_KEY_AQUI";
 
 const supabase = window.supabase.createClient(
   supabaseUrl,
@@ -10,7 +10,7 @@ const supabase = window.supabase.createClient(
 );
 
 /*********************************
- * VARIÁVEIS GLOBAIS
+ * VARIÁVEIS
  *********************************/
 const gantt = document.getElementById("gantt");
 const DAY_WIDTH = 40;
@@ -19,7 +19,7 @@ let itens = [];
 let inicioGlobal;
 
 /*********************************
- * FUNÇÕES DE DATA
+ * DATAS
  *********************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
@@ -30,15 +30,14 @@ function diffDays(a, b) {
 }
 
 /*********************************
- * CARREGAR DADOS
+ * LOAD
  *********************************/
 async function carregar() {
   gantt.innerHTML = "";
 
   const { data, error } = await supabase
     .from("cronograma_estrutura")
-    .select("*")
-    .order("estrutura");
+    .select("*");
 
   if (error) {
     console.error(error);
@@ -166,7 +165,7 @@ function drag(bar, item, tipo) {
 }
 
 /*********************************
- * SALVAR
+ * SAVE
  *********************************/
 async function salvarCronograma() {
   for (const i of itens) {

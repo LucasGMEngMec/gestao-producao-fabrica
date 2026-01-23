@@ -7,24 +7,24 @@ const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /*************************************************
- * CONFIGURAÇÃO
+ * CONFIG
  *************************************************/
 const DAY_WIDTH = 42;
 const RANGE_DAYS = 240;
 
 /*************************************************
- * ELEMENTOS
+ * DOM
  *************************************************/
 const gantt = document.getElementById("gantt");
 
 /*************************************************
- * UTIL
+ * UTILS
  *************************************************/
 const parseDate = d => new Date(d + "T00:00:00");
 const diffDays = (a, b) => Math.round((b - a) / 86400000);
 
 /*************************************************
- * VARIÁVEIS
+ * STATE
  *************************************************/
 let itens = [];
 let baseDate;
@@ -35,7 +35,7 @@ let baseDate;
 document.addEventListener("DOMContentLoaded", carregar);
 
 /*************************************************
- * CARREGAR
+ * LOAD
  *************************************************/
 async function carregar() {
   gantt.innerHTML = "";
@@ -43,7 +43,7 @@ async function carregar() {
   const { data, error } = await sb
     .from("cronograma_estrutura")
     .select("*")
-    .order("ordem_prioridade");
+    .order("ordem_prioridade", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -62,24 +62,24 @@ async function carregar() {
   });
 
   renderHeader();
-  renderRows();
+  renderBody();
   renderTodayLine();
 }
 
 /*************************************************
- * HEADER (ANO / MÊS / DIA)
+ * HEADER
  *************************************************/
 function renderHeader() {
   const header = document.createElement("div");
   header.className = "gantt-header";
 
-  const rowYear = document.createElement("div");
-  const rowMonth = document.createElement("div");
-  const rowDay = document.createElement("div");
+  const yearRow = document.createElement("div");
+  const monthRow = document.createElement("div");
+  const dayRow = document.createElement("div");
 
-  rowYear.className = "header-row year";
-  rowMonth.className = "header-row month";
-  rowDay.className = "header-row day";
+  yearRow.className = "header-row";
+  monthRow.className = "header-row";
+  dayRow.className = "header-row";
 
   let lastYear = null;
   let lastMonth = null;
@@ -88,50 +88,53 @@ function renderHeader() {
     const d = new Date(baseDate);
     d.setDate(d.getDate() + i);
 
-    // DIA
+    // DAY
     const day = document.createElement("div");
     day.className = "cell";
     day.style.width = DAY_WIDTH + "px";
     day.innerText = d.getDate();
-    rowDay.appendChild(day);
+    dayRow.appendChild(day);
 
-    // MÊS
+    // MONTH
     if (d.getMonth() !== lastMonth) {
       lastMonth = d.getMonth();
       const m = document.createElement("div");
       m.className = "cell";
       m.style.width = DAY_WIDTH + "px";
       m.innerText = d.toLocaleString("pt-BR", { month: "short" });
-      rowMonth.appendChild(m);
+      monthRow.appendChild(m);
     } else {
-      rowMonth.lastChild.style.width =
-        parseInt(rowMonth.lastChild.style.width) + DAY_WIDTH + "px";
+      monthRow.lastChild.style.width =
+        parseInt(monthRow.lastChild.style.width) + DAY_WIDTH + "px";
     }
 
-    // ANO
+    // YEAR
     if (d.getFullYear() !== lastYear) {
       lastYear = d.getFullYear();
       const y = document.createElement("div");
       y.className = "cell";
       y.style.width = DAY_WIDTH + "px";
       y.innerText = lastYear;
-      rowYear.appendChild(y);
+      yearRow.appendChild(y);
     } else {
-      rowYear.lastChild.style.width =
-        parseInt(rowYear.lastChild.style.width) + DAY_WIDTH + "px";
+      yearRow.lastChild.style.width =
+        parseInt(yearRow.lastChild.style.width) + DAY_WIDTH + "px";
     }
   }
 
-  header.appendChild(rowYear);
-  header.appendChild(rowMonth);
-  header.appendChild(rowDay);
+  header.appendChild(yearRow);
+  header.appendChild(monthRow);
+  header.appendChild(dayRow);
   gantt.appendChild(header);
 }
 
 /*************************************************
- * ROWS + BARRAS
+ * BODY + BARS
  *************************************************/
-function renderRows() {
+function renderBody() {
+  const body = document.createElement("div");
+  body.className = "gantt-body";
+
   itens.forEach(item => {
     if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
 
@@ -150,12 +153,14 @@ function renderRows() {
     enableDrag(bar, item);
 
     row.appendChild(bar);
-    gantt.appendChild(row);
+    body.appendChild(row);
   });
+
+  gantt.appendChild(body);
 }
 
 /*************************************************
- * DRAG HORIZONTAL
+ * DRAG
  *************************************************/
 function enableDrag(bar, item) {
   let startX, startLeft;
@@ -170,23 +175,25 @@ function enableDrag(bar, item) {
 
     document.onmouseup = () => {
       document.onmousemove = null;
+
       const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
       const nova = new Date(baseDate);
       nova.setDate(nova.getDate() + dias);
+
       item.data_inicio_plan = nova.toISOString().slice(0, 10);
     };
   });
 }
 
 /*************************************************
- * LINHA DO DIA ATUAL
+ * TODAY LINE
  *************************************************/
 function renderTodayLine() {
-  const hoje = diffDays(baseDate, new Date()) * DAY_WIDTH;
+  const pos = diffDays(baseDate, new Date()) * DAY_WIDTH;
 
   const line = document.createElement("div");
   line.className = "today-line";
-  line.style.left = hoje + "px";
+  line.style.left = pos + "px";
 
   gantt.appendChild(line);
 }

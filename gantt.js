@@ -85,4 +85,85 @@ function criarEstrutura(item) {
   }
 }
 
-/* ========= ROW =======*
+/* ========= ROW ========= */
+function criarLinha(item, tipo, inicio, duracao) {
+  if (!inicio || !duracao) return;
+
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const label = document.createElement("div");
+  label.className = "label";
+  label.innerHTML = `<b>${item.estrutura}</b><br>${item.obra}<br>${item.instalacao}`;
+
+  const area = document.createElement("div");
+  area.className = "bar-area";
+
+  const bar = document.createElement("div");
+  bar.className = `bar ${tipo}`;
+  bar.innerText = tipo.toUpperCase();
+
+  const start = parseDate(inicio);
+  bar.style.left = diffDays(inicioGlobal, start) * DAY_WIDTH + "px";
+  bar.style.width = duracao * DAY_WIDTH + "px";
+
+  drag(bar, item, tipo);
+
+  area.appendChild(bar);
+  row.appendChild(label);
+  row.appendChild(area);
+  gantt.appendChild(row);
+}
+
+/* ========= DRAG ========= */
+function drag(bar, item, tipo) {
+  let startX, startLeft;
+
+  bar.onmousedown = e => {
+    startX = e.clientX;
+    startLeft = parseInt(bar.style.left);
+
+    document.onmousemove = e => {
+      bar.style.left = startLeft + (e.clientX - startX) + "px";
+    };
+
+    document.onmouseup = () => {
+      document.onmousemove = null;
+
+      const days = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
+      const d = new Date(inicioGlobal);
+      d.setDate(d.getDate() + days);
+
+      const iso = d.toISOString().slice(0, 10);
+
+      if (tipo === "plan") item.data_inicio_plan = iso;
+      if (tipo === "real") item.data_inicio_real = iso;
+      if (tipo === "forecast") item.data_fim_forecast = iso;
+    };
+  };
+}
+
+/* ========= SAVE ========= */
+async function salvarCronograma() {
+  for (const i of itens) {
+    const { error } = await supabaseClient
+      .from("cronograma_estrutural")
+      .update({
+        data_inicio_plan: i.data_inicio_plan,
+        data_inicio_real: i.data_inicio_real,
+        data_fim_forecast: i.data_fim_forecast
+      })
+      .eq("id", i.id);
+
+    if (error) {
+      console.error(error);
+      alert("Erro ao salvar cronograma");
+      return;
+    }
+  }
+
+  alert("Cronograma salvo com sucesso");
+}
+
+/* ========= INIT ========= */
+carregar();

@@ -4,121 +4,142 @@
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
 
-  <style>
-    * { box-sizing: border-box; }
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <style>
     body {
-      font-family: "Segoe UI", Arial, sans-serif;
       margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
       background: #f4f6f8;
       color: #1f2937;
     }
 
     header {
-      background: #0f172a;
+      background: linear-gradient(90deg, #0f172a, #1e293b);
       color: #fff;
-      padding: 16px 24px;
+      padding: 14px 24px;
       font-size: 18px;
       font-weight: 600;
     }
 
-    main {
-      padding: 20px;
-      overflow-x: auto;
+    .toolbar {
+      padding: 12px 24px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }
 
     button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
       background: #2563eb;
       color: #fff;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 6px;
       cursor: pointer;
-      font-weight: 500;
-      margin-bottom: 16px;
+      font-size: 13px;
     }
 
-    button:hover {
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button.active {
       background: #1d4ed8;
+      color: #fff;
     }
 
-    /* TIMELINE */
+    .gantt-container {
+      position: relative;
+      overflow-x: auto;
+      padding: 0 0 24px 0;
+      background: #fff;
+    }
+
     .timeline {
-      display: flex;
       position: sticky;
       top: 0;
-      background: #f4f6f8;
+      background: #fff;
       z-index: 5;
+      border-bottom: 1px solid #e5e7eb;
     }
 
-    .day {
-      width: 40px;
-      text-align: center;
+    .timeline-row {
+      display: flex;
+      height: 26px;
       font-size: 11px;
+      color: #374151;
+    }
+
+    .cell {
+      box-sizing: border-box;
       border-right: 1px solid #e5e7eb;
-      padding: 4px 0;
+      text-align: center;
+      line-height: 26px;
       white-space: nowrap;
     }
 
-    /* ROWS */
-    .row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      overflow: hidden;
+    .days {
+      font-size: 10px;
+      color: #6b7280;
     }
 
-    .label {
-      width: 320px;
-      padding: 10px 12px;
-      font-size: 12px;
-      background: #f1f5f9;
-      border-right: 1px solid #e5e7eb;
-      line-height: 1.4;
-    }
-
-    .bar-area {
+    .gantt-area {
       position: relative;
-      height: 42px;
-      flex: 1;
+    }
+
+    .gantt-row {
+      position: relative;
+      height: 34px;
+      border-bottom: 1px solid #f1f5f9;
     }
 
     .bar {
       position: absolute;
-      top: 8px;
-      height: 26px;
+      height: 22px;
+      top: 6px;
+      background: #2563eb;
       border-radius: 6px;
       color: #fff;
       font-size: 11px;
+      padding: 0 8px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      white-space: nowrap;
       cursor: grab;
       user-select: none;
     }
 
     .bar:active {
       cursor: grabbing;
+      opacity: 0.85;
     }
 
-    .plan { background: #2563eb; }
-    .real { background: #16a34a; }
-    .forecast { background: #f59e0b; }
+    .today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #111827;
+      z-index: 4;
+    }
   </style>
 </head>
 <body>
 
-<header>
-  Cronograma de Produção — Gantt
-</header>
+<header>Cronograma de Produção — Gantt</header>
 
-<main>
+<div class="toolbar">
   <button id="btnSalvar">Salvar Cronograma</button>
-  <div id="gantt"></div>
-</main>
+  <button id="btnBDR" class="secondary active">BDR</button>
+  <button id="btnBJ" class="secondary">BJ</button>
+</div>
+
+<div class="gantt-container">
+  <div id="timeline" class="timeline"></div>
+  <div id="gantt" class="gantt-area"></div>
+</div>
 
 <script src="gantt.js"></script>
 </body>

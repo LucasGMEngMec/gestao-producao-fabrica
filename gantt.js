@@ -4,33 +4,33 @@
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-if (!window.__SB__) {
-  window.__SB__ = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+if (!window.__SUPABASE__) {
+  window.__SUPABASE__ = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
-const sb = window.__SB__;
+const sb = window.__SUPABASE__;
 
 /*************************************************
- * CONFIGURAÇÕES
+ * CONFIGURAÇÃO GERAL
  *************************************************/
 const DAY_WIDTH = 48;
-const TOTAL_DAYS = 180;
-
-let fornecedor = "BDR";
-let itens = [];
-let baseDate;
+const TOTAL_DAYS = 210;
 
 /*************************************************
  * ELEMENTOS
  *************************************************/
 const gantt = document.getElementById("gantt");
-const btnBDR = document.getElementById("btnBDR");
-const btnBJ = document.getElementById("btnBJ");
 
 /*************************************************
- * UTIL
+ * UTILITÁRIOS
  *************************************************/
-const parse = d => new Date(d + "T00:00:00");
-const diff = (a, b) => Math.round((b - a) / 86400000);
+const parseDate = d => new Date(d + "T00:00:00");
+const diffDays = (a, b) => Math.round((b - a) / 86400000);
+
+/*************************************************
+ * VARIÁVEIS
+ *************************************************/
+let itens = [];
+let baseDate;
 
 /*************************************************
  * CARREGAR DADOS
@@ -38,7 +38,6 @@ const diff = (a, b) => Math.round((b - a) / 86400000);
 async function carregar() {
   gantt.innerHTML = "";
 
-  // 🔹 NÃO filtrar por fornecedor enquanto a coluna não for garantida
   const { data, error } = await sb
     .from("cronograma_estrutura")
     .select("*")
@@ -46,107 +45,113 @@ async function carregar() {
 
   if (error) {
     console.error(error);
-    alert("Erro ao carregar cronograma");
+    alert("Erro ao carregar dados");
     return;
   }
 
   itens = data || [];
 
-  // Data base = menor data encontrada ou hoje
   baseDate = new Date();
   itens.forEach(i => {
     if (i.data_inicio_plan) {
-      const d = parse(i.data_inicio_plan);
+      const d = parseDate(i.data_inicio_plan);
       if (d < baseDate) baseDate = d;
     }
   });
 
-  criarCabecalho();
-  itens.forEach(renderLinha);
-  marcarHoje();
+  renderCabecalho();
+  renderLinhas();
+  renderHoje();
 }
 
 /*************************************************
- * CABEÇALHO (ANO / MÊS / DIA)
+ * CABEÇALHO FIXO (ANO / MÊS / DIA)
  *************************************************/
-function criarCabecalho() {
-  const anos = document.createElement("div");
-  const meses = document.createElement("div");
-  const dias = document.createElement("div");
+function renderCabecalho() {
+  const header = document.createElement("div");
+  header.className = "gantt-header";
 
-  anos.className = meses.className = dias.className = "header-row";
+  const rowYear = document.createElement("div");
+  const rowMonth = document.createElement("div");
+  const rowDay = document.createElement("div");
 
-  let anoAtual = null;
-  let mesAtual = null;
-  let spanAno = null;
-  let spanMes = null;
+  rowYear.className = rowMonth.className = rowDay.className = "header-row";
+
+  let currentYear = null;
+  let currentMonth = null;
 
   for (let i = 0; i < TOTAL_DAYS; i++) {
     const d = new Date(baseDate);
     d.setDate(d.getDate() + i);
 
-    // ANO
-    if (d.getFullYear() !== anoAtual) {
-      anoAtual = d.getFullYear();
-      spanAno = document.createElement("div");
-      spanAno.className = "day";
-      spanAno.innerText = anoAtual;
-      spanAno.style.width = "0px";
-      anos.appendChild(spanAno);
-    }
-    spanAno.style.width =
-      (parseInt(spanAno.style.width) + DAY_WIDTH) + "px";
+    // DIA
+    const day = document.createElement("div");
+    day.className = "day";
+    day.style.width = DAY_WIDTH + "px";
+    day.innerText = d.getDate();
+    rowDay.appendChild(day);
 
     // MÊS
-    if (d.getMonth() !== mesAtual) {
-      mesAtual = d.getMonth();
-      spanMes = document.createElement("div");
-      spanMes.className = "day";
-      spanMes.innerText = d.toLocaleString("pt-BR", { month: "short" });
-      spanMes.style.width = "0px";
-      meses.appendChild(spanMes);
+    if (d.getMonth() !== currentMonth) {
+      currentMonth = d.getMonth();
+      const m = document.createElement("div");
+      m.className = "month";
+      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
+      m.style.width = DAY_WIDTH + "px";
+      rowMonth.appendChild(m);
+    } else {
+      rowMonth.lastChild.style.width =
+        parseInt(rowMonth.lastChild.style.width) + DAY_WIDTH + "px";
     }
-    spanMes.style.width =
-      (parseInt(spanMes.style.width) + DAY_WIDTH) + "px";
 
-    // DIA
-    const dia = document.createElement("div");
-    dia.className = "day";
-    dia.innerText = d.getDate();
-    dias.appendChild(dia);
+    // ANO
+    if (d.getFullYear() !== currentYear) {
+      currentYear = d.getFullYear();
+      const y = document.createElement("div");
+      y.className = "year";
+      y.innerText = currentYear;
+      y.style.width = DAY_WIDTH + "px";
+      rowYear.appendChild(y);
+    } else {
+      rowYear.lastChild.style.width =
+        parseInt(rowYear.lastChild.style.width) + DAY_WIDTH + "px";
+    }
   }
 
-  gantt.appendChild(anos);
-  gantt.appendChild(meses);
-  gantt.appendChild(dias);
+  header.appendChild(rowYear);
+  header.appendChild(rowMonth);
+  header.appendChild(rowDay);
+  gantt.appendChild(header);
 }
 
 /*************************************************
  * LINHAS E BARRAS
  *************************************************/
-function renderLinha(item) {
-  if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
+function renderLinhas() {
+  itens.forEach(item => {
+    if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
 
-  const row = document.createElement("div");
-  row.className = "row";
+    const row = document.createElement("div");
+    row.className = "row";
 
-  const bar = document.createElement("div");
-  bar.className = "bar";
-  bar.innerText =
-    `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.innerText =
+      `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-  const inicio = parse(item.data_inicio_plan);
-  bar.style.left = diff(baseDate, inicio) * DAY_WIDTH + "px";
-  bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
+    const inicio = parseDate(item.data_inicio_plan);
+    bar.style.left = diffDays(baseDate, inicio) * DAY_WIDTH + "px";
+    bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
 
-  habilitarDrag(bar, item);
+    habilitarDrag(bar, item);
 
-  row.appendChild(bar);
-  gantt.appendChild(row);
+    row.appendChild(bar);
+    gantt.appendChild(row);
+  });
 }
 
 /*************************************************
- * DRAG
+ * DRAG HORIZONTAL
  *************************************************/
 function habilitarDrag(bar, item) {
   let startX, startLeft;
@@ -161,21 +166,19 @@ function habilitarDrag(bar, item) {
 
     document.onmouseup = () => {
       document.onmousemove = null;
-
       const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
-      const novaData = new Date(baseDate);
-      novaData.setDate(novaData.getDate() + dias);
-
-      item.data_inicio_plan = novaData.toISOString().slice(0, 10);
+      const nova = new Date(baseDate);
+      nova.setDate(nova.getDate() + dias);
+      item.data_inicio_plan = nova.toISOString().slice(0, 10);
     };
   };
 }
 
 /*************************************************
- * LINHA DO DIA ATUAL
+ * MARCADOR DO DIA ATUAL
  *************************************************/
-function marcarHoje() {
-  const hoje = diff(baseDate, new Date()) * DAY_WIDTH;
+function renderHoje() {
+  const hoje = diffDays(baseDate, new Date()) * DAY_WIDTH;
 
   const linha = document.createElement("div");
   linha.className = "today-line";
@@ -183,21 +186,6 @@ function marcarHoje() {
 
   gantt.appendChild(linha);
 }
-
-/*************************************************
- * BOTÕES
- *************************************************/
-btnBDR.onclick = () => {
-  btnBDR.classList.add("active");
-  btnBJ.classList.remove("active");
-  carregar();
-};
-
-btnBJ.onclick = () => {
-  btnBJ.classList.add("active");
-  btnBDR.classList.remove("active");
-  carregar();
-};
 
 /*************************************************
  * INIT

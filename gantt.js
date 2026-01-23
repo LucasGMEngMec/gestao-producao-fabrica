@@ -4,10 +4,14 @@
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+if (!window.__supabaseClient) {
+  window.__supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+}
+
+const supabase = window.__supabaseClient;
 
 /*************************************************
  * CONFIGURAÇÃO

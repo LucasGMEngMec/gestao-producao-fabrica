@@ -1,43 +1,62 @@
 /*************************************************
- * SUPABASE
+ * SUPABASE — CLIENTE ÚNICO GLOBAL (OBRIGATÓRIO)
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-if (!window.__supabaseClient) {
-  window.__supabaseClient = window.supabase.createClient(
+if (!window.__SUPABASE_CLIENT__) {
+  window.__SUPABASE_CLIENT__ = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
   );
 }
 
-const supabase = window.__supabaseClient;
+const sb = window.__SUPABASE_CLIENT__;
 
 /*************************************************
- * CONFIGURAÇÃO
+ * ELEMENTOS
  *************************************************/
-const DAY_WIDTH = 32; // compacto, mas fácil de arrastar
-const RANGE_DAYS = 180;
+const ganttEl = document.getElementById("gantt");
+const btnSalvar = document.getElementById("btnSalvar");
 
-let fornecedorAtual = "BDR";
+/*************************************************
+ * CONFIGURAÇÕES
+ *************************************************/
+const DAY_WIDTH = 50;          // maior para facilitar drag
+const TOTAL_DAYS = 180;
+
+/*************************************************
+ * VARIÁVEIS
+ *************************************************/
 let itens = [];
-let inicioGlobal;
+let dataBase;
 
 /*************************************************
- * HELPERS
+ * UTIL
  *************************************************/
-const parseDate = d => new Date(d + "T00:00:00");
-const diffDays = (a, b) => Math.round((b - a) / 86400000);
+function parseDate(d) {
+  if (!d) return null;
+  return new Date(d + "T00:00:00");
+}
+
+function diffDays(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function formatLabel(item) {
+  return `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+}
 
 /*************************************************
- * LOAD
+ * CARREGAR DADOS
  *************************************************/
 async function carregar() {
-  const { data, error } = await supabase
+  ganttEl.innerHTML = "";
+
+  const { data, error } = await sb
     .from("cronograma_estrutura")
     .select("*")
-    .eq("fornecedor", fornecedorAtual)
-    .order("id");
+    .order("ordem_prioridade", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -46,160 +65,124 @@ async function carregar() {
   }
 
   itens = data;
-  calcularInicio();
-  render();
-}
 
-function calcularInicio() {
-  inicioGlobal = new Date();
+  dataBase = new Date();
   itens.forEach(i => {
-    if (i.data_inicio_plan) {
-      const d = parseDate(i.data_inicio_plan);
-      if (d < inicioGlobal) inicioGlobal = d;
-    }
+    const d = parseDate(i.data_inicio_plan);
+    if (d && d < dataBase) dataBase = d;
   });
-  inicioGlobal.setDate(inicioGlobal.getDate() - 10);
+
+  criarTimeline();
+  itens.forEach(renderBarra);
+  marcarHoje();
 }
 
 /*************************************************
  * TIMELINE
  *************************************************/
-function renderTimeline() {
-  const timeline = document.getElementById("timeline");
-  timeline.innerHTML = "";
+function criarTimeline() {
+  const timeline = document.createElement("div");
+  timeline.className = "timeline";
 
-  const yearRow = document.createElement("div");
-  const monthRow = document.createElement("div");
-  const dayRow = document.createElement("div");
-
-  yearRow.className = monthRow.className = dayRow.className = "timeline-row";
-
-  let lastYear = null;
-  let lastMonth = null;
-
-  for (let i = 0; i < RANGE_DAYS; i++) {
-    const d = new Date(inicioGlobal);
+  for (let i = 0; i < TOTAL_DAYS; i++) {
+    const d = new Date(dataBase);
     d.setDate(d.getDate() + i);
 
-    if (d.getFullYear() !== lastYear) {
-      const y = document.createElement("div");
-      y.className = "cell";
-      y.style.width = DAY_WIDTH * 30 + "px";
-      y.innerText = d.getFullYear();
-      yearRow.appendChild(y);
-      lastYear = d.getFullYear();
-    }
-
-    if (d.getMonth() !== lastMonth) {
-      const m = document.createElement("div");
-      m.className = "cell";
-      m.style.width = DAY_WIDTH * 30 + "px";
-      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
-      monthRow.appendChild(m);
-      lastMonth = d.getMonth();
-    }
-
     const day = document.createElement("div");
-    day.className = "cell days";
-    day.style.width = DAY_WIDTH + "px";
-    day.innerText = d.getDate();
-    dayRow.appendChild(day);
+    day.className = "day";
+    day.innerHTML = `<div>${d.getDate()}</div>`;
+
+    timeline.appendChild(day);
   }
 
-  timeline.append(yearRow, monthRow, dayRow);
+  ganttEl.appendChild(timeline);
 }
 
 /*************************************************
- * GANTT
+ * BARRAS
  *************************************************/
-function renderGantt() {
-  const gantt = document.getElementById("gantt");
-  gantt.innerHTML = "";
+function renderBarra(item) {
+  if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
 
-  // linha de hoje
-  const hoje = new Date();
-  const todayLine = document.createElement("div");
-  todayLine.className = "today-line";
-  todayLine.style.left =
-    diffDays(inicioGlobal, hoje) * DAY_WIDTH + "px";
-  gantt.appendChild(todayLine);
+  const row = document.createElement("div");
+  row.className = "row";
 
-  itens.forEach(item => {
-    const row = document.createElement("div");
-    row.className = "gantt-row";
+  const area = document.createElement("div");
+  area.className = "bar-area";
 
-    const bar = document.createElement("div");
-    bar.className = "bar";
-    bar.innerText = `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+  const bar = document.createElement("div");
+  bar.className = "bar plan";
+  bar.innerText = formatLabel(item);
 
-    const inicio = parseDate(item.data_inicio_plan);
-    bar.style.left =
-      diffDays(inicioGlobal, inicio) * DAY_WIDTH + "px";
-    bar.style.width =
-      item.duracao_planejada_dias * DAY_WIDTH + "px";
+  const inicio = parseDate(item.data_inicio_plan);
+  const left = diffDays(dataBase, inicio) * DAY_WIDTH;
 
-    tornarArrastavel(bar, item);
-    row.appendChild(bar);
-    gantt.appendChild(row);
-  });
-}
+  bar.style.left = `${left}px`;
+  bar.style.width = `${item.duracao_planejada_dias * DAY_WIDTH}px`;
 
-function render() {
-  renderTimeline();
-  renderGantt();
+  dragBar(bar, item);
+
+  area.appendChild(bar);
+  row.appendChild(area);
+  ganttEl.appendChild(row);
 }
 
 /*************************************************
  * DRAG
  *************************************************/
-function tornarArrastavel(bar, item) {
-  let startX, startLeft;
+function dragBar(bar, item) {
+  let startX;
+  let startLeft;
 
   bar.onmousedown = e => {
     startX = e.clientX;
     startLeft = parseInt(bar.style.left, 10);
-    document.onmousemove = move;
-    document.onmouseup = stop;
+
+    document.onmousemove = ev => {
+      const delta = ev.clientX - startX;
+      bar.style.left = startLeft + delta + "px";
+    };
+
+    document.onmouseup = () => {
+      document.onmousemove = null;
+      document.onmouseup = null;
+
+      const dias = Math.round(parseInt(bar.style.left, 10) / DAY_WIDTH);
+      const novaData = new Date(dataBase);
+      novaData.setDate(novaData.getDate() + dias);
+
+      item.data_inicio_plan = novaData.toISOString().slice(0, 10);
+    };
   };
-
-  function move(e) {
-    const dx = e.clientX - startX;
-    bar.style.left = startLeft + dx + "px";
-  }
-
-  function stop() {
-    document.onmousemove = null;
-    document.onmouseup = null;
-
-    const dias = Math.round(parseInt(bar.style.left, 10) / DAY_WIDTH);
-    const novaData = new Date(inicioGlobal);
-    novaData.setDate(novaData.getDate() + dias);
-
-    item.data_inicio_plan = novaData.toISOString().slice(0, 10);
-  }
 }
 
 /*************************************************
- * AÇÕES
+ * HOJE
  *************************************************/
-document.getElementById("btnSalvar").onclick = async () => {
+function marcarHoje() {
+  const hoje = new Date();
+  const pos = diffDays(dataBase, hoje) * DAY_WIDTH;
+
+  const linha = document.createElement("div");
+  linha.className = "today-line";
+  linha.style.left = pos + "px";
+
+  ganttEl.appendChild(linha);
+}
+
+/*************************************************
+ * SALVAR
+ *************************************************/
+btnSalvar.onclick = async () => {
   for (const i of itens) {
-    await supabase
+    await sb
       .from("cronograma_estrutura")
-      .update({ data_inicio_plan: i.data_inicio_plan })
+      .update({
+        data_inicio_plan: i.data_inicio_plan
+      })
       .eq("id", i.id);
   }
   alert("Cronograma salvo");
-};
-
-document.getElementById("btnBDR").onclick = () => {
-  fornecedorAtual = "BDR";
-  carregar();
-};
-
-document.getElementById("btnBJ").onclick = () => {
-  fornecedorAtual = "BJ";
-  carregar();
 };
 
 /*************************************************

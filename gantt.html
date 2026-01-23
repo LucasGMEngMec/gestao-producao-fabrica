@@ -4,60 +4,66 @@
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
 
-  <!-- Supabase -->
+  <!-- SUPABASE CDN (UMA ÚNICA VEZ) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body {
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: #f4f6f8;
-      color: #1f2937;
+      font-family: Inter, Arial, sans-serif;
+      background: #f5f7fb;
     }
 
     header {
       background: linear-gradient(90deg, #0f172a, #1e293b);
       color: #fff;
-      padding: 14px 24px;
+      padding: 14px 20px;
       font-size: 18px;
       font-weight: 600;
     }
 
-    .toolbar {
-      padding: 12px 24px;
+    .controls {
+      padding: 14px 20px;
       display: flex;
       gap: 10px;
-      align-items: center;
     }
 
     button {
       border: none;
       padding: 8px 14px;
       border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .primary {
       background: #2563eb;
       color: #fff;
-      cursor: pointer;
-      font-size: 13px;
     }
 
-    button.secondary {
+    .filter {
       background: #e5e7eb;
-      color: #111827;
     }
 
-    button.active {
-      background: #1d4ed8;
+    .filter.active {
+      background: #2563eb;
       color: #fff;
     }
 
-    .gantt-container {
+    #gantt-wrapper {
       position: relative;
       overflow-x: auto;
-      padding: 0 0 24px 0;
       background: #fff;
+      padding-bottom: 30px;
     }
 
     .timeline {
+      position: relative;
+      min-width: 3000px;
+    }
+
+    .header-row {
+      display: flex;
       position: sticky;
       top: 0;
       background: #fff;
@@ -65,80 +71,64 @@
       border-bottom: 1px solid #e5e7eb;
     }
 
-    .timeline-row {
-      display: flex;
-      height: 26px;
-      font-size: 11px;
-      color: #374151;
-    }
-
-    .cell {
-      box-sizing: border-box;
-      border-right: 1px solid #e5e7eb;
+    .day {
+      width: 48px;
       text-align: center;
-      line-height: 26px;
-      white-space: nowrap;
+      font-size: 11px;
+      padding: 4px 0;
+      border-right: 1px solid #e5e7eb;
     }
 
-    .days {
-      font-size: 10px;
-      color: #6b7280;
+    .month {
+      font-size: 12px;
+      font-weight: 600;
+      padding-left: 6px;
     }
 
-    .gantt-area {
+    .row {
       position: relative;
-    }
-
-    .gantt-row {
-      position: relative;
-      height: 34px;
+      height: 42px;
       border-bottom: 1px solid #f1f5f9;
     }
 
     .bar {
       position: absolute;
-      height: 22px;
       top: 6px;
+      height: 28px;
       background: #2563eb;
-      border-radius: 6px;
       color: #fff;
-      font-size: 11px;
-      padding: 0 8px;
+      border-radius: 8px;
+      font-size: 12px;
       display: flex;
       align-items: center;
-      white-space: nowrap;
+      padding: 0 10px;
       cursor: grab;
-      user-select: none;
-    }
-
-    .bar:active {
-      cursor: grabbing;
-      opacity: 0.85;
+      white-space: nowrap;
     }
 
     .today-line {
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 2px;
+      width: 3px;
       background: #111827;
-      z-index: 4;
+      z-index: 10;
     }
   </style>
 </head>
+
 <body>
 
 <header>Cronograma de Produção — Gantt</header>
 
-<div class="toolbar">
-  <button id="btnSalvar">Salvar Cronograma</button>
-  <button id="btnBDR" class="secondary active">BDR</button>
-  <button id="btnBJ" class="secondary">BJ</button>
+<div class="controls">
+  <button id="btnSalvar" class="primary">Salvar Cronograma</button>
+  <button id="btnBDR" class="filter active">BDR</button>
+  <button id="btnBJ" class="filter">BJ</button>
 </div>
 
-<div class="gantt-container">
-  <div id="timeline" class="timeline"></div>
-  <div id="gantt" class="gantt-area"></div>
+<div id="gantt-wrapper">
+  <div id="gantt"></div>
 </div>
 
 <script src="gantt.js"></script>

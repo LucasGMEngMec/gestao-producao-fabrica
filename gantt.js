@@ -1,157 +1,128 @@
 /*************************************************
- * SUPABASE — CLIENTE ÚNICO GLOBAL (OBRIGATÓRIO)
+ * SUPABASE CLIENTE ÚNICO
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-if (!window.__SUPABASE_CLIENT__) {
-  window.__SUPABASE_CLIENT__ = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+if (!window.__SB__) {
+  window.__SB__ = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
+const sb = window.__SB__;
 
-const sb = window.__SUPABASE_CLIENT__;
+/*************************************************
+ * CONFIG
+ *************************************************/
+const DAY_WIDTH = 48;
+const TOTAL_DAYS = 180;
+
+let fornecedor = "BDR";
+let itens = [];
+let baseDate;
 
 /*************************************************
  * ELEMENTOS
  *************************************************/
-const ganttEl = document.getElementById("gantt");
+const gantt = document.getElementById("gantt");
 const btnSalvar = document.getElementById("btnSalvar");
-
-/*************************************************
- * CONFIGURAÇÕES
- *************************************************/
-const DAY_WIDTH = 50;          // maior para facilitar drag
-const TOTAL_DAYS = 180;
-
-/*************************************************
- * VARIÁVEIS
- *************************************************/
-let itens = [];
-let dataBase;
+const btnBDR = document.getElementById("btnBDR");
+const btnBJ = document.getElementById("btnBJ");
 
 /*************************************************
  * UTIL
  *************************************************/
-function parseDate(d) {
-  if (!d) return null;
-  return new Date(d + "T00:00:00");
-}
-
-function diffDays(a, b) {
-  return Math.round((b - a) / 86400000);
-}
-
-function formatLabel(item) {
-  return `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
-}
+const parse = d => new Date(d + "T00:00:00");
+const diff = (a, b) => Math.round((b - a) / 86400000);
 
 /*************************************************
- * CARREGAR DADOS
+ * LOAD
  *************************************************/
 async function carregar() {
-  ganttEl.innerHTML = "";
+  gantt.innerHTML = "";
 
-  const { data, error } = await sb
+  const { data } = await sb
     .from("cronograma_estrutura")
     .select("*")
-    .order("ordem_prioridade", { ascending: true });
+    .eq("fornecedor", fornecedor)
+    .order("ordem_prioridade");
 
-  if (error) {
-    console.error(error);
-    alert("Erro ao carregar dados");
-    return;
-  }
+  itens = data || [];
 
-  itens = data;
-
-  dataBase = new Date();
+  baseDate = new Date();
   itens.forEach(i => {
-    const d = parseDate(i.data_inicio_plan);
-    if (d && d < dataBase) dataBase = d;
+    const d = parse(i.data_inicio_plan);
+    if (d < baseDate) baseDate = d;
   });
 
-  criarTimeline();
-  itens.forEach(renderBarra);
-  marcarHoje();
+  criarCabecalho();
+  itens.forEach(renderLinha);
+  linhaHoje();
 }
 
 /*************************************************
- * TIMELINE
+ * CABEÇALHO
  *************************************************/
-function criarTimeline() {
-  const timeline = document.createElement("div");
-  timeline.className = "timeline";
+function criarCabecalho() {
+  const header = document.createElement("div");
+  header.className = "header-row";
 
   for (let i = 0; i < TOTAL_DAYS; i++) {
-    const d = new Date(dataBase);
+    const d = new Date(baseDate);
     d.setDate(d.getDate() + i);
 
-    const day = document.createElement("div");
-    day.className = "day";
-    day.innerHTML = `<div>${d.getDate()}</div>`;
-
-    timeline.appendChild(day);
+    const cell = document.createElement("div");
+    cell.className = "day";
+    cell.innerHTML = `<div>${d.getDate()}</div>`;
+    header.appendChild(cell);
   }
 
-  ganttEl.appendChild(timeline);
+  gantt.appendChild(header);
 }
 
 /*************************************************
- * BARRAS
+ * LINHAS
  *************************************************/
-function renderBarra(item) {
-  if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
+function renderLinha(item) {
+  if (!item.data_inicio_plan) return;
 
   const row = document.createElement("div");
   row.className = "row";
 
-  const area = document.createElement("div");
-  area.className = "bar-area";
-
   const bar = document.createElement("div");
-  bar.className = "bar plan";
-  bar.innerText = formatLabel(item);
+  bar.className = "bar";
+  bar.innerText = `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-  const inicio = parseDate(item.data_inicio_plan);
-  const left = diffDays(dataBase, inicio) * DAY_WIDTH;
+  const start = parse(item.data_inicio_plan);
+  bar.style.left = diff(baseDate, start) * DAY_WIDTH + "px";
+  bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
 
-  bar.style.left = `${left}px`;
-  bar.style.width = `${item.duracao_planejada_dias * DAY_WIDTH}px`;
+  drag(bar, item);
 
-  dragBar(bar, item);
-
-  area.appendChild(bar);
-  row.appendChild(area);
-  ganttEl.appendChild(row);
+  row.appendChild(bar);
+  gantt.appendChild(row);
 }
 
 /*************************************************
  * DRAG
  *************************************************/
-function dragBar(bar, item) {
-  let startX;
-  let startLeft;
+function drag(bar, item) {
+  let startX, startLeft;
 
   bar.onmousedown = e => {
     startX = e.clientX;
-    startLeft = parseInt(bar.style.left, 10);
+    startLeft = parseInt(bar.style.left);
 
     document.onmousemove = ev => {
-      const delta = ev.clientX - startX;
-      bar.style.left = startLeft + delta + "px";
+      bar.style.left = startLeft + (ev.clientX - startX) + "px";
     };
 
     document.onmouseup = () => {
       document.onmousemove = null;
       document.onmouseup = null;
 
-      const dias = Math.round(parseInt(bar.style.left, 10) / DAY_WIDTH);
-      const novaData = new Date(dataBase);
-      novaData.setDate(novaData.getDate() + dias);
-
-      item.data_inicio_plan = novaData.toISOString().slice(0, 10);
+      const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
+      const nova = new Date(baseDate);
+      nova.setDate(nova.getDate() + dias);
+      item.data_inicio_plan = nova.toISOString().slice(0, 10);
     };
   };
 }
@@ -159,30 +130,29 @@ function dragBar(bar, item) {
 /*************************************************
  * HOJE
  *************************************************/
-function marcarHoje() {
-  const hoje = new Date();
-  const pos = diffDays(dataBase, hoje) * DAY_WIDTH;
-
-  const linha = document.createElement("div");
-  linha.className = "today-line";
-  linha.style.left = pos + "px";
-
-  ganttEl.appendChild(linha);
+function linhaHoje() {
+  const pos = diff(baseDate, new Date()) * DAY_WIDTH;
+  const l = document.createElement("div");
+  l.className = "today-line";
+  l.style.left = pos + "px";
+  gantt.appendChild(l);
 }
 
 /*************************************************
- * SALVAR
+ * FILTROS
  *************************************************/
-btnSalvar.onclick = async () => {
-  for (const i of itens) {
-    await sb
-      .from("cronograma_estrutura")
-      .update({
-        data_inicio_plan: i.data_inicio_plan
-      })
-      .eq("id", i.id);
-  }
-  alert("Cronograma salvo");
+btnBDR.onclick = () => {
+  fornecedor = "BDR";
+  btnBDR.classList.add("active");
+  btnBJ.classList.remove("active");
+  carregar();
+};
+
+btnBJ.onclick = () => {
+  fornecedor = "BJ";
+  btnBJ.classList.add("active");
+  btnBDR.classList.remove("active");
+  carregar();
 };
 
 /*************************************************

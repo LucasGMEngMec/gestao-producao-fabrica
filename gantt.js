@@ -1,39 +1,40 @@
 /*************************************************
- * CONFIGURAÇÃO SUPABASE (REST)
+ * CONFIGURAÇÕES
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 const TABLE = "cronograma_estrutura";
 
+const DAY_WIDTH = 56; // MAIS LARGO PARA FACILITAR DRAG
+const TOTAL_DAYS = 150;
+
 /*************************************************
- * CONSTANTES
+ * ELEMENTOS
  *************************************************/
-const DAY_WIDTH = 40;
 const gantt = document.getElementById("gantt");
 
 /*************************************************
- * ESTADO GLOBAL
+ * ESTADO
  *************************************************/
 let itens = [];
 let inicioGlobal = null;
-let fornecedorAtual = null;
+let hoje = new Date();
+hoje.setHours(0,0,0,0);
 
 /*************************************************
- * DATAS – BLINDADAS
+ * DATAS
  *************************************************/
 function parseDate(d) {
   if (!d) return null;
-  const date = new Date(d + "T00:00:00");
-  return isNaN(date) ? null : date;
+  const dt = new Date(d + "T00:00:00");
+  return isNaN(dt) ? null : dt;
 }
 
 function formatDate(d) {
-  if (!(d instanceof Date) || isNaN(d)) return null;
   return d.toISOString().slice(0, 10);
 }
 
 function diffDays(a, b) {
-  if (!a || !b) return 0;
   return Math.round((b - a) / 86400000);
 }
 
@@ -53,126 +54,109 @@ async function carregar() {
 
   itens = await res.json();
 
-  // Normalizar prioridades
-  itens.forEach((i, idx) => {
-    if (i.ordem_prioridade == null) i.ordem_prioridade = idx + 1;
-  });
-
-  // Definir início global válido
-  const datasValidas = itens
+  const datas = itens
     .map(i => parseDate(i.data_inicio_plan))
     .filter(Boolean);
 
-  inicioGlobal = datasValidas.length
-    ? new Date(Math.min(...datasValidas))
+  inicioGlobal = datas.length
+    ? new Date(Math.min(...datas))
     : new Date();
 
-  montarAbas();
-}
+  inicioGlobal.setHours(0,0,0,0);
 
-/*************************************************
- * ABAS POR FORNECEDOR (SEM DUPLICAR)
- *************************************************/
-function montarAbas() {
-  gantt.innerHTML = "";
-
-  const fornecedores = [
-    ...new Set(itens.map(i => i.fornecedor || "SEM FORNECEDOR"))
-  ];
-
-  const tabs = document.createElement("div");
-  tabs.style.marginBottom = "16px";
-
-  fornecedores.forEach(f => {
-    const btn = document.createElement("button");
-    btn.innerText = f;
-    btn.style.marginRight = "8px";
-
-    btn.onclick = () => {
-      fornecedorAtual = f;
-      render();
-    };
-
-    tabs.appendChild(btn);
-  });
-
-  gantt.appendChild(tabs);
-
-  fornecedorAtual = fornecedores[0];
   render();
 }
 
 /*************************************************
- * RENDER (LIMPA ANTES DE DESENHAR)
+ * RENDER GERAL
  *************************************************/
 function render() {
-  const antigo = document.getElementById("areaGantt");
-  if (antigo) antigo.remove();
+  gantt.innerHTML = "";
 
-  const area = document.createElement("div");
-  area.id = "areaGantt";
-
-  criarTimeline(area);
+  criarTimeline();
+  criarLinhaHoje();
 
   itens
-    .filter(i => (i.fornecedor || "SEM FORNECEDOR") === fornecedorAtual)
-    .sort((a, b) => a.ordem_prioridade - b.ordem_prioridade)
-    .forEach(i => criarLinha(area, i));
-
-  gantt.appendChild(area);
+    .sort((a,b) => (a.ordem_prioridade||0) - (b.ordem_prioridade||0))
+    .forEach(i => criarLinha(i));
 }
 
 /*************************************************
- * TIMELINE
+ * TIMELINE (ANO / MÊS / DIA)
  *************************************************/
-function criarTimeline(container) {
-  const t = document.createElement("div");
-  t.className = "timeline";
+function criarTimeline() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "timeline-wrapper";
 
-  for (let i = 0; i < 120; i++) {
+  const linhaAno = document.createElement("div");
+  const linhaMes = document.createElement("div");
+  const linhaDia = document.createElement("div");
+
+  linhaAno.className = "timeline-year";
+  linhaMes.className = "timeline-month";
+  linhaDia.className = "timeline-day";
+
+  let mesAtual = -1;
+  let anoAtual = -1;
+
+  for (let i = 0; i < TOTAL_DAYS; i++) {
     const d = new Date(inicioGlobal);
     d.setDate(d.getDate() + i);
 
-    const c = document.createElement("div");
-    c.className = "day";
-    c.innerText = d.getDate();
-    t.appendChild(c);
+    if (d.getMonth() !== mesAtual) {
+      const m = document.createElement("div");
+      m.style.width = `${DAY_WIDTH * 30}px`;
+      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
+      linhaMes.appendChild(m);
+      mesAtual = d.getMonth();
+    }
+
+    if (d.getFullYear() !== anoAtual) {
+      const a = document.createElement("div");
+      a.style.width = `${DAY_WIDTH * 365}px`;
+      a.innerText = d.getFullYear();
+      linhaAno.appendChild(a);
+      anoAtual = d.getFullYear();
+    }
+
+    const dia = document.createElement("div");
+    dia.className = "day";
+    dia.style.width = DAY_WIDTH + "px";
+    dia.innerText = d.getDate();
+    linhaDia.appendChild(dia);
   }
 
-  container.appendChild(t);
+  wrapper.appendChild(linhaAno);
+  wrapper.appendChild(linhaMes);
+  wrapper.appendChild(linhaDia);
+  gantt.appendChild(wrapper);
 }
 
 /*************************************************
- * LINHA + PRIORIDADE
+ * LINHA DO DIA ATUAL
  *************************************************/
-function criarLinha(container, item) {
+function criarLinhaHoje() {
+  const offset = diffDays(inicioGlobal, hoje) * DAY_WIDTH;
+
+  const linha = document.createElement("div");
+  linha.className = "today-line";
+  linha.style.left = offset + "px";
+
+  gantt.appendChild(linha);
+}
+
+/*************************************************
+ * LINHA DE TAREFA
+ *************************************************/
+function criarLinha(item) {
   const row = document.createElement("div");
   row.className = "row";
-  row.draggable = true;
-
-  row.ondragstart = e => {
-    e.dataTransfer.setData("id", item.id);
-  };
-
-  row.ondragover = e => e.preventDefault();
-
-  row.ondrop = e => {
-    const idOrigem = e.dataTransfer.getData("id");
-    atualizarPrioridade(idOrigem, item.id);
-  };
-
-  const label = document.createElement("div");
-  label.className = "label";
-  label.innerHTML = `
-    <b>PLAN</b> - ${item.obra} - ${item.instalacao} - ${item.estrutura}
-  `;
 
   const area = document.createElement("div");
   area.className = "bar-area";
 
   const bar = document.createElement("div");
   bar.className = "bar plan";
-  bar.innerText = "PLANEJADO";
 
   const inicio = parseDate(item.data_inicio_plan);
   const offset = inicio ? diffDays(inicioGlobal, inicio) : 0;
@@ -180,26 +164,28 @@ function criarLinha(container, item) {
   bar.style.left = offset * DAY_WIDTH + "px";
   bar.style.width = (item.duracao_planejada_dias || 1) * DAY_WIDTH + "px";
 
-  habilitarDragHorizontal(bar, item);
+  bar.innerText = `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+
+  habilitarDrag(bar, item);
 
   area.appendChild(bar);
-  row.appendChild(label);
   row.appendChild(area);
-  container.appendChild(row);
+  gantt.appendChild(row);
 }
 
 /*************************************************
- * DRAG HORIZONTAL (DATAS – SEGURO)
+ * DRAG SUAVE (SNAP EM DIA)
  *************************************************/
-function habilitarDragHorizontal(bar, item) {
+function habilitarDrag(bar, item) {
   let startX, startLeft;
 
   bar.onmousedown = e => {
     startX = e.clientX;
-    startLeft = parseInt(bar.style.left) || 0;
+    startLeft = parseInt(bar.style.left);
 
     document.onmousemove = ev => {
-      bar.style.left = startLeft + (ev.clientX - startX) + "px";
+      const delta = ev.clientX - startX;
+      bar.style.left = startLeft + delta + "px";
     };
 
     document.onmouseup = () => {
@@ -207,30 +193,15 @@ function habilitarDragHorizontal(bar, item) {
       document.onmouseup = null;
 
       const left = parseInt(bar.style.left);
-      if (isNaN(left)) return;
-
       const dias = Math.round(left / DAY_WIDTH);
+
       const novaData = new Date(inicioGlobal);
       novaData.setDate(novaData.getDate() + dias);
 
-      const formatada = formatDate(novaData);
-      if (formatada) item.data_inicio_plan = formatada;
+      item.data_inicio_plan = formatDate(novaData);
+      bar.style.left = dias * DAY_WIDTH + "px";
     };
   };
-}
-
-/*************************************************
- * PRIORIDADE
- *************************************************/
-function atualizarPrioridade(idOrigem, idDestino) {
-  const a = itens.find(i => i.id == idOrigem);
-  const b = itens.find(i => i.id == idDestino);
-  if (!a || !b) return;
-
-  [a.ordem_prioridade, b.ordem_prioridade] =
-    [b.ordem_prioridade, a.ordem_prioridade];
-
-  render();
 }
 
 /*************************************************

@@ -2,7 +2,7 @@
  * SUPABASE CLIENT
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
+const SUPABASE_KEY = "SUA_ANON_PUBLIC_KEY_AQUI"; // ⚠️ anon public
 
 const sb = window.supabase.createClient(
   SUPABASE_URL,
@@ -36,16 +36,20 @@ function diffDays(a, b) {
 async function carregar() {
   gantt.innerHTML = "";
 
+  console.log("Consultando tabela cronograma_estrutura");
+
   const { data, error } = await sb
-    .from("cronograma_estrutura")
+    .from("cronograma_estrutura") // ✅ NOME CONFIRMADO
     .select("*")
     .order("id");
 
   if (error) {
-    console.error(error);
+    console.error("Erro Supabase:", error);
     alert("Erro ao carregar dados");
     return;
   }
+
+  console.log("Dados carregados:", data);
 
   itens = data;
 
@@ -110,7 +114,7 @@ function criarLinha(item, tipo, inicio, duracao) {
 
   const label = document.createElement("div");
   label.className = "label";
-  label.innerHTML = `<b>${item.estrutura}</b><br>${item.obra}<br>${item.instalacao}`;
+  label.innerHTML = `<b>${item.estrutura}</b><br>${item.obra ?? ""}<br>${item.instalacao}`;
 
   const area = document.createElement("div");
   area.className = "bar-area";
@@ -135,7 +139,7 @@ function criarLinha(item, tipo, inicio, duracao) {
 btnSalvar.onclick = async () => {
   for (const i of itens) {
     await sb
-      .from("cronograma_estrutura")
+      .from("cronograma_estrutura") // ✅ CONFIRMADO
       .update({
         data_inicio_plan: i.data_inicio_plan,
         data_inicio_real: i.data_inicio_real,
@@ -150,4 +154,4 @@ btnSalvar.onclick = async () => {
 /*************************************************
  * INIT
  *************************************************/
-document.addEventListener("DOMContentLoaded", carregar);
+window.onload = carregar;

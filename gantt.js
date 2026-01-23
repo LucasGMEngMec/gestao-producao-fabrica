@@ -1,21 +1,27 @@
+/***************************************************
+ * SUPABASE — CRIAR APENAS UMA VEZ
+ ***************************************************/
+if (!window.supabase) {
+  const SUPABASE_URL = "https://dkimejmjovtcdalcinhu.supabase.co";
+  const SUPABASE_KEY =
+    "sb_publishable_cpq_meWic2I3c9vpmtKj0w_Q0AzHA2t";
+
+  window.supabase = supabaseJs.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+}
+
+const supabase = window.supabase;
+
+/***************************************************
+ * GANTT
+ ***************************************************/
 const gantt = document.getElementById("gantt");
 const DAY_WIDTH = 40;
 
 let itens = [];
 let inicioGlobal;
-
-/* ========= SUPABASE ========= */
-/* ATENÇÃO:
-   - NÃO declaramos `supabase`
-   - usamos `window.supabase` (já criado pelo CDN)
-*/
-const SUPABASE_URL = "https://dklmejmovtcdalcinhu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cpq_meW1z3c9vpmtKjgW_Q0AzH2A";
-
-const supabase = window.supabase.createClient(
-  "https://dklmejmjovtcdalcinhu.supabase.co",
-  "sb_publishable_cpq_mwiczl3c9vpmtKj0w_Q0AzH2t"
-);
 
 /* ========= DATA ========= */
 function parseDate(d) {
@@ -30,7 +36,7 @@ function diffDays(a, b) {
 async function carregar() {
   gantt.innerHTML = "";
 
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from("cronograma_estrutural")
     .select("*")
     .order("ordem_prioridade");
@@ -142,6 +148,7 @@ function drag(bar, item, tipo) {
       d.setDate(d.getDate() + days);
 
       const iso = d.toISOString().slice(0, 10);
+
       if (tipo === "plan") item.data_inicio_plan = iso;
       if (tipo === "real") item.data_inicio_real = iso;
       if (tipo === "forecast") item.data_fim_forecast = iso;
@@ -152,7 +159,7 @@ function drag(bar, item, tipo) {
 /* ========= SAVE ========= */
 async function salvarCronograma() {
   for (const i of itens) {
-    await supabaseClient
+    await supabase
       .from("cronograma_estrutural")
       .update({
         data_inicio_plan: i.data_inicio_plan,

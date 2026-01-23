@@ -1,30 +1,28 @@
 /*************************************************
- * SUPABASE CLIENT (VERSÃO ÚNICA E CORRETA)
+ * CONFIGURAÇÃO SUPABASE (REST)
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY =
-  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
+const TABLE = "cronograma_estrutura";
 
 /*************************************************
- * CONSTANTES E VARIÁVEIS
+ * ELEMENTOS
  *************************************************/
 const gantt = document.getElementById("gantt");
-const btnSalvar = document.getElementById("btnSalvar");
 const DAY_WIDTH = 40;
 
 let itens = [];
-let inicioGlobal = null;
+let inicioGlobal;
 
 /*************************************************
- * FUNÇÕES DE DATA
+ * DATAS
  *************************************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
+}
+
+function formatDate(d) {
+  return d.toISOString().slice(0, 10);
 }
 
 function diffDays(a, b) {
@@ -32,25 +30,23 @@ function diffDays(a, b) {
 }
 
 /*************************************************
- * CARREGAR DADOS DO SUPABASE
+ * CARREGAR DADOS
  *************************************************/
-async function carregarDados() {
+async function carregar() {
   gantt.innerHTML = "";
 
-  const { data, error } = await supabaseClient
-    .from("cronograma_estrutura")
-    .select("*")
-    .order("instalacao");
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${TABLE}?select=*`,
+    {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+    }
+  );
 
-  if (error) {
-    console.error(error);
-    alert("Erro ao carregar dados do Supabase");
-    return;
-  }
+  itens = await res.json();
 
-  itens = data;
-
-  /* ===== DATA INICIAL GLOBAL ===== */
   inicioGlobal = new Date();
 
   itens.forEach(i => {
@@ -61,22 +57,18 @@ async function carregarDados() {
   });
 
   criarTimeline();
-  itens.forEach(criarEstrutura);
+  itens.forEach(criarLinha);
 }
 
 /*************************************************
- * TIMELINE (ANO / MÊS / DIA)
+ * TIMELINE
  *************************************************/
 function criarTimeline() {
-  const container = document.createElement("div");
+  const anos = document.createElement("div");
+  const meses = document.createElement("div");
+  const dias = document.createElement("div");
 
-  const linhaAno = document.createElement("div");
-  const linhaMes = document.createElement("div");
-  const linhaDia = document.createElement("div");
-
-  linhaAno.className = "timeline";
-  linhaMes.className = "timeline";
-  linhaDia.className = "timeline";
+  anos.className = meses.className = dias.className = "timeline";
 
   let anoAtual = null;
   let mesAtual = null;
@@ -85,90 +77,59 @@ function criarTimeline() {
     const d = new Date(inicioGlobal);
     d.setDate(d.getDate() + i);
 
-    /* ===== ANO ===== */
-    const anoDiv = document.createElement("div");
-    anoDiv.className = "day";
-    anoDiv.innerText = d.getFullYear() !== anoAtual ? d.getFullYear() : "";
-    linhaAno.appendChild(anoDiv);
+    const a = document.createElement("div");
+    a.className = "day";
+    a.innerText = d.getFullYear() !== anoAtual ? d.getFullYear() : "";
+    anos.appendChild(a);
     anoAtual = d.getFullYear();
 
-    /* ===== MÊS ===== */
-    const mesDiv = document.createElement("div");
-    mesDiv.className = "day";
-    mesDiv.innerText =
-      d.getMonth() !== mesAtual
-        ? d.toLocaleString("pt-BR", { month: "short" })
-        : "";
-    linhaMes.appendChild(mesDiv);
+    const m = document.createElement("div");
+    m.className = "day";
+    m.innerText = d.getMonth() !== mesAtual
+      ? d.toLocaleString("pt-BR", { month: "short" })
+      : "";
+    meses.appendChild(m);
     mesAtual = d.getMonth();
 
-    /* ===== DIA ===== */
-    const diaDiv = document.createElement("div");
-    diaDiv.className = "day";
-    diaDiv.innerText = d.getDate();
-    linhaDia.appendChild(diaDiv);
+    const di = document.createElement("div");
+    di.className = "day";
+    di.innerText = d.getDate();
+    dias.appendChild(di);
   }
 
-  container.appendChild(linhaAno);
-  container.appendChild(linhaMes);
-  container.appendChild(linhaDia);
-  gantt.appendChild(container);
+  gantt.appendChild(anos);
+  gantt.appendChild(meses);
+  gantt.appendChild(dias);
 }
 
 /*************************************************
- * CRIAÇÃO DAS LINHAS DO GANTT
+ * LINHAS + DRAG
  *************************************************/
-function criarEstrutura(item) {
-  const inicioPlan =
-    item.data_inicio_plan ||
-    new Date().toISOString().slice(0, 10);
-
-  criarLinha(item, "plan", inicioPlan, item.duracao_planejada_dias);
-
-  if (item.data_inicio_real)
-    criarLinha(
-      item,
-      "real",
-      item.data_inicio_real,
-      item.duracao_planejada_dias
-    );
-
-  if (item.data_fim_forecast) {
-    const inicio = item.data_inicio_real || inicioPlan;
-    criarLinha(
-      item,
-      "forecast",
-      inicio,
-      diffDays(parseDate(inicio), parseDate(item.data_fim_forecast))
-    );
-  }
-}
-
-function criarLinha(item, tipo, inicio, duracao) {
-  if (!inicio || !duracao) return;
+function criarLinha(item) {
+  if (!item.duracao_planejada_dias) return;
 
   const row = document.createElement("div");
   row.className = "row";
 
   const label = document.createElement("div");
   label.className = "label";
-  label.innerHTML = `
-    <b>${item.estrutura}</b><br>
-    ${item.instalacao}
-  `;
+  label.innerHTML =
+    `<b>PLAN</b> - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
   const area = document.createElement("div");
   area.className = "bar-area";
 
   const bar = document.createElement("div");
-  bar.className = `bar ${tipo}`;
-  bar.innerText = tipo.toUpperCase();
+  bar.className = "bar plan";
+  bar.innerText = "PLANEJADO";
 
-  const inicioDate = parseDate(inicio);
-
+  const inicio = parseDate(item.data_inicio_plan);
   bar.style.left =
-    diffDays(inicioGlobal, inicioDate) * DAY_WIDTH + "px";
-  bar.style.width = duracao * DAY_WIDTH + "px";
+    diffDays(inicioGlobal, inicio) * DAY_WIDTH + "px";
+  bar.style.width =
+    item.duracao_planejada_dias * DAY_WIDTH + "px";
+
+  habilitarDrag(bar, item);
 
   area.appendChild(bar);
   row.appendChild(label);
@@ -177,13 +138,35 @@ function criarLinha(item, tipo, inicio, duracao) {
 }
 
 /*************************************************
- * SALVAR (PLACEHOLDER FUNCIONAL)
+ * DRAG & DROP
  *************************************************/
-btnSalvar.onclick = async () => {
-  alert("Salvar acionado (persistência pode ser expandida)");
-};
+function habilitarDrag(bar, item) {
+  let startX;
+  let startLeft;
+
+  bar.addEventListener("mousedown", e => {
+    startX = e.clientX;
+    startLeft = parseInt(bar.style.left);
+
+    document.onmousemove = ev => {
+      const delta = ev.clientX - startX;
+      bar.style.left = startLeft + delta + "px";
+    };
+
+    document.onmouseup = () => {
+      document.onmousemove = null;
+      document.onmouseup = null;
+
+      const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
+      const novaData = new Date(inicioGlobal);
+      novaData.setDate(novaData.getDate() + dias);
+
+      item.data_inicio_plan = formatDate(novaData);
+    };
+  });
+}
 
 /*************************************************
  * INIT
  *************************************************/
-carregarDados();
+carregar();

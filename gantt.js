@@ -12,9 +12,9 @@ let inicioGlobal;
 const SUPABASE_URL = "https://dklmejmovtcdalcinhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meW1z3c9vpmtKjgW_Q0AzH2A";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
+const supabase = window.supabase.createClient(
+  "https://dklmejmjovtcdalcinhu.supabase.co",
+  "sb_publishable_cpq_mwiczl3c9vpmtKj0w_Q0AzH2t"
 );
 
 /* ========= DATA ========= */

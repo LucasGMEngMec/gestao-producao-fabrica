@@ -1,198 +1,111 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<title>Gantt de Produção</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Cronograma de Produção — Gantt</title>
 
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f4f6f8;
-  margin: 10px;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f6f6;
+      margin: 20px;
+    }
 
-h2 {
-  text-align: center;
-}
+    h1 {
+      text-align: center;
+    }
 
-.abas {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
+    #toolbar {
+      margin-bottom: 12px;
+      text-align: right;
+    }
 
-.abas button {
-  padding: 8px 12px;
-  border: none;
-  cursor: pointer;
-  background: #ccc;
-}
+    button {
+      padding: 8px 14px;
+      background: #2e7d32;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
-.abas button.ativa {
-  background: #2e7d32;
-  color: #fff;
-}
+    #gantt {
+      border: 1px solid #ccc;
+      background: #fff;
+      overflow-x: auto;
+      position: relative;
+      padding-bottom: 20px;
+    }
 
-.gantt {
-  background: #fff;
-  border: 1px solid #ccc;
-  overflow-x: auto;
-}
+    .timeline {
+      display: flex;
+      position: sticky;
+      top: 0;
+      background: #eee;
+      z-index: 10;
+      border-bottom: 1px solid #ccc;
+    }
 
-.linha {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  border-bottom: 1px solid #eee;
-}
+    .day {
+      min-width: 40px;
+      text-align: center;
+      font-size: 12px;
+      border-left: 1px solid #ddd;
+      padding: 4px 0;
+    }
 
-.rotulo {
-  padding: 6px;
-  font-size: 13px;
-  border-right: 1px solid #ddd;
-}
+    .row {
+      display: flex;
+      border-bottom: 1px solid #eee;
+      height: 32px;
+      position: relative;
+    }
 
-.faixa {
-  position: relative;
-  height: 60px;
-}
+    .label {
+      width: 260px;
+      padding: 4px;
+      font-size: 12px;
+      border-right: 1px solid #ddd;
+      background: #fafafa;
+      line-height: 12px;
+    }
 
-.barra {
-  position: absolute;
-  height: 14px;
-  border-radius: 4px;
-  cursor: grab;
-}
+    .bar-area {
+      position: relative;
+      flex: 1;
+    }
 
-.programado { background: #0275d8; top: 6px; }
-.realizado  { background: #2e7d32; top: 24px; }
-.forecast   { background: #f0ad4e; top: 42px; opacity: 0.7; }
+    .bar {
+      position: absolute;
+      height: 20px;
+      top: 6px;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 4px;
+      cursor: grab;
+      white-space: nowrap;
+      overflow: hidden;
+    }
 
-</style>
+    .plan { background: #1976d2; }
+    .real { background: #2e7d32; }
+    .forecast { background: #c62828; }
+  </style>
 </head>
 
 <body>
 
-<h2>Cronograma de Produção — Gantt</h2>
+<h1>Cronograma de Produção — Gantt</h1>
 
-<div class="abas" id="abas"></div>
-<div class="gantt" id="gantt"></div>
+<div id="toolbar">
+  <button onclick="salvarCronograma()">Salvar Cronograma</button>
+</div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+<div id="gantt"></div>
 
-const supabase = createClient(
-  "https://dklmejmlovtcadlicnhu.supabase.co",
-  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
-);
-
-let cronogramas = [];
-let fornecedorAtual = null;
-
-const abasEl = document.getElementById("abas");
-const ganttEl = document.getElementById("gantt");
-
-const PIXEL_DIA = 20;
-
-/* ===============================
-   CARREGAR CRONOGRAMA
-=============================== */
-async function carregarCronograma() {
-  const { data } = await supabase
-    .from("cronograma_estrutura")
-    .select("*")
-    .order("ordem_prioridade", { ascending: true });
-
-  cronogramas = data || [];
-
-  const fornecedores = [...new Set(cronogramas.map(c => c.fornecedor))];
-  criarAbas(fornecedores);
-
-  if (fornecedores.length) {
-    selecionarFornecedor(fornecedores[0]);
-  }
-}
-
-/* ===============================
-   ABAS
-=============================== */
-function criarAbas(fornecedores) {
-  abasEl.innerHTML = "";
-  fornecedores.forEach(f => {
-    const btn = document.createElement("button");
-    btn.textContent = f;
-    btn.onclick = () => selecionarFornecedor(f);
-    abasEl.appendChild(btn);
-  });
-}
-
-function selecionarFornecedor(fornecedor) {
-  fornecedorAtual = fornecedor;
-  [...abasEl.children].forEach(b =>
-    b.classList.toggle("ativa", b.textContent === fornecedor)
-  );
-  renderizarGantt();
-}
-
-/* ===============================
-   GANTT
-=============================== */
-function renderizarGantt() {
-  ganttEl.innerHTML = "";
-
-  const itens = cronogramas.filter(c => c.fornecedor === fornecedorAtual);
-
-  itens.forEach((c, idx) => {
-    const linha = document.createElement("div");
-    linha.className = "linha";
-
-    const rotulo = document.createElement("div");
-    rotulo.className = "rotulo";
-    rotulo.innerHTML = `
-      <b>${c.estrutura}</b><br>
-      ${c.obra}<br>
-      ${c.instalacao}
-    `;
-
-    const faixa = document.createElement("div");
-    faixa.className = "faixa";
-
-    // Barra Programado
-    const prog = document.createElement("div");
-    prog.className = "barra programado";
-    prog.style.left = "0px";
-    prog.style.width = (c.duracao_planejada_dias * PIXEL_DIA) + "px";
-
-    habilitarDrag(prog);
-
-    faixa.appendChild(prog);
-    linha.appendChild(rotulo);
-    linha.appendChild(faixa);
-    ganttEl.appendChild(linha);
-  });
-}
-
-/* ===============================
-   DRAG
-=============================== */
-function habilitarDrag(barra) {
-  let startX, startLeft;
-
-  barra.onmousedown = e => {
-    startX = e.clientX;
-    startLeft = parseInt(barra.style.left);
-    document.onmousemove = ev => {
-      barra.style.left = startLeft + (ev.clientX - startX) + "px";
-    };
-    document.onmouseup = () => {
-      document.onmousemove = null;
-    };
-  };
-}
-
-/* INICIAL */
-carregarCronograma();
-</script>
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="gantt.js"></script>
 
 </body>
 </html>

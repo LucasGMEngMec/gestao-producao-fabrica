@@ -1,10 +1,11 @@
 /*************************************************
- * SUPABASE — DECLARADO UMA ÚNICA VEZ
+ * SUPABASE CLIENT
+ * NÃO USAR "const supabase"
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcdalcinhu.supabase.co";
-const SUPABASE_KEY = "SUA_PUBLISHABLE_KEY_AQUI"; // mantenha exatamente como no painel
+const SUPABASE_KEY = "SUA_PUBLISHABLE_KEY_AQUI";
 
-const supabase = window.supabase.createClient(
+const sb = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
@@ -30,9 +31,14 @@ function diffDays(a, b) {
 
 /* ========= LOAD ========= */
 async function carregar() {
+  if (!gantt) {
+    console.error("Elemento #gantt não encontrado no HTML");
+    return;
+  }
+
   gantt.innerHTML = "";
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("cronograma_estrutura")
     .select("*")
     .order("id");
@@ -116,57 +122,29 @@ function criarLinha(item, tipo, inicio, duracao) {
   bar.style.left = diffDays(inicioGlobal, start) * DAY_WIDTH + "px";
   bar.style.width = duracao * DAY_WIDTH + "px";
 
-  drag(bar, item, tipo);
-
   area.appendChild(bar);
   row.appendChild(label);
   row.appendChild(area);
   gantt.appendChild(row);
 }
 
-/* ========= DRAG ========= */
-function drag(bar, item, tipo) {
-  let startX, startLeft;
+/* ========= SAVE ========= */
+if (btnSalvar) {
+  btnSalvar.onclick = async () => {
+    for (const i of itens) {
+      await sb
+        .from("cronograma_estrutura")
+        .update({
+          data_inicio_plan: i.data_inicio_plan,
+          data_inicio_real: i.data_inicio_real,
+          data_fim_forecast: i.data_fim_forecast
+        })
+        .eq("id", i.id);
+    }
 
-  bar.onmousedown = e => {
-    startX = e.clientX;
-    startLeft = parseInt(bar.style.left);
-
-    document.onmousemove = e => {
-      bar.style.left = startLeft + (e.clientX - startX) + "px";
-    };
-
-    document.onmouseup = () => {
-      document.onmousemove = null;
-
-      const days = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
-      const d = new Date(inicioGlobal);
-      d.setDate(d.getDate() + days);
-
-      const iso = d.toISOString().slice(0, 10);
-
-      if (tipo === "plan") item.data_inicio_plan = iso;
-      if (tipo === "real") item.data_inicio_real = iso;
-      if (tipo === "forecast") item.data_fim_forecast = iso;
-    };
+    alert("Cronograma salvo");
   };
 }
 
-/* ========= SAVE ========= */
-btnSalvar.onclick = async () => {
-  for (const i of itens) {
-    await supabase
-      .from("cronograma_estrutura")
-      .update({
-        data_inicio_plan: i.data_inicio_plan,
-        data_inicio_real: i.data_inicio_real,
-        data_fim_forecast: i.data_fim_forecast
-      })
-      .eq("id", i.id);
-  }
-
-  alert("Cronograma salvo");
-};
-
 /* ========= INIT ========= */
-carregar();
+document.addEventListener("DOMContentLoaded", carregar);

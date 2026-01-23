@@ -1,6 +1,5 @@
 /*************************************************
  * SUPABASE CLIENT
- * NÃO USAR "const supabase"
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcdalcinhu.supabase.co";
 const SUPABASE_KEY = "SUA_PUBLISHABLE_KEY_AQUI";
@@ -11,7 +10,7 @@ const sb = window.supabase.createClient(
 );
 
 /*************************************************
- * GANTT
+ * VARIÁVEIS
  *************************************************/
 const gantt = document.getElementById("gantt");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -20,7 +19,9 @@ const DAY_WIDTH = 40;
 let itens = [];
 let inicioGlobal;
 
-/* ========= UTIL ========= */
+/*************************************************
+ * FUNÇÕES AUXILIARES
+ *************************************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
 }
@@ -29,13 +30,10 @@ function diffDays(a, b) {
   return Math.round((b - a) / 86400000);
 }
 
-/* ========= LOAD ========= */
+/*************************************************
+ * CARREGAR DADOS
+ *************************************************/
 async function carregar() {
-  if (!gantt) {
-    console.error("Elemento #gantt não encontrado no HTML");
-    return;
-  }
-
   gantt.innerHTML = "";
 
   const { data, error } = await sb
@@ -63,7 +61,9 @@ async function carregar() {
   itens.forEach(criarEstrutura);
 }
 
-/* ========= TIMELINE ========= */
+/*************************************************
+ * TIMELINE
+ *************************************************/
 function criarTimeline() {
   const t = document.createElement("div");
   t.className = "timeline";
@@ -81,7 +81,9 @@ function criarTimeline() {
   gantt.appendChild(t);
 }
 
-/* ========= ESTRUTURA ========= */
+/*************************************************
+ * LINHAS
+ *************************************************/
 function criarEstrutura(item) {
   criarLinha(item, "plan", item.data_inicio_plan, item.duracao_planejada_dias);
 
@@ -100,7 +102,6 @@ function criarEstrutura(item) {
     );
 }
 
-/* ========= LINHA ========= */
 function criarLinha(item, tipo, inicio, duracao) {
   if (!inicio || !duracao) return;
 
@@ -128,23 +129,25 @@ function criarLinha(item, tipo, inicio, duracao) {
   gantt.appendChild(row);
 }
 
-/* ========= SAVE ========= */
-if (btnSalvar) {
-  btnSalvar.onclick = async () => {
-    for (const i of itens) {
-      await sb
-        .from("cronograma_estrutura")
-        .update({
-          data_inicio_plan: i.data_inicio_plan,
-          data_inicio_real: i.data_inicio_real,
-          data_fim_forecast: i.data_fim_forecast
-        })
-        .eq("id", i.id);
-    }
+/*************************************************
+ * SALVAR
+ *************************************************/
+btnSalvar.onclick = async () => {
+  for (const i of itens) {
+    await sb
+      .from("cronograma_estrutura")
+      .update({
+        data_inicio_plan: i.data_inicio_plan,
+        data_inicio_real: i.data_inicio_real,
+        data_fim_forecast: i.data_fim_forecast
+      })
+      .eq("id", i.id);
+  }
 
-    alert("Cronograma salvo");
-  };
-}
+  alert("Cronograma salvo");
+};
 
-/* ========= INIT ========= */
+/*************************************************
+ * INIT
+ *************************************************/
 document.addEventListener("DOMContentLoaded", carregar);

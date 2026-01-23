@@ -1,20 +1,23 @@
-/***************************************************
- * SUPABASE — USAR CLIENTE GLOBAL DO CDN
- ***************************************************/
-const sb = window.supabase;
+/************************************************************
+ * CONFIGURAÇÃO SUPABASE
+ ************************************************************/
+const SUPABASE_URL = "https://dkmejmlovtcdalcinhu.supabase.co";
+const SUPABASE_KEY = "SUA_PUBLICABLE_KEY_AQUI"; // use a publishable key
 
-/***************************************************
- * ELEMENTOS E CONSTANTES
- ***************************************************/
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/************************************************************
+ * VARIÁVEIS
+ ************************************************************/
 const gantt = document.getElementById("gantt");
 const DAY_WIDTH = 40;
 
 let itens = [];
 let inicioGlobal;
 
-/***************************************************
+/************************************************************
  * FUNÇÕES DE DATA
- ***************************************************/
+ ************************************************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
 }
@@ -23,16 +26,16 @@ function diffDays(a, b) {
   return Math.round((b - a) / 86400000);
 }
 
-/***************************************************
+/************************************************************
  * CARREGAR DADOS
- ***************************************************/
+ ************************************************************/
 async function carregar() {
   gantt.innerHTML = "";
 
   const { data, error } = await sb
-    .from("cronograma_estrutural")
+    .from("cronograma_estrutura")
     .select("*")
-    .order("ordem_prioridade");
+    .order("estrutura");
 
   if (error) {
     console.error(error);
@@ -54,9 +57,9 @@ async function carregar() {
   itens.forEach(criarEstrutura);
 }
 
-/***************************************************
+/************************************************************
  * TIMELINE
- ***************************************************/
+ ************************************************************/
 function criarTimeline() {
   const t = document.createElement("div");
   t.className = "timeline";
@@ -74,17 +77,16 @@ function criarTimeline() {
   gantt.appendChild(t);
 }
 
-/***************************************************
- * ESTRUTURAS
- ***************************************************/
+/************************************************************
+ * LINHAS
+ ************************************************************/
 function criarEstrutura(item) {
   criarLinha(item, "plan", item.data_inicio_plan, item.duracao_planejada_dias);
 
-  if (item.data_inicio_real) {
+  if (item.data_inicio_real)
     criarLinha(item, "real", item.data_inicio_real, item.duracao_planejada_dias);
-  }
 
-  if (item.data_fim_forecast) {
+  if (item.data_fim_forecast)
     criarLinha(
       item,
       "forecast",
@@ -94,12 +96,8 @@ function criarEstrutura(item) {
         parseDate(item.data_fim_forecast)
       )
     );
-  }
 }
 
-/***************************************************
- * LINHAS
- ***************************************************/
 function criarLinha(item, tipo, inicio, duracao) {
   if (!inicio || !duracao) return;
 
@@ -121,7 +119,7 @@ function criarLinha(item, tipo, inicio, duracao) {
   bar.style.left = diffDays(inicioGlobal, start) * DAY_WIDTH + "px";
   bar.style.width = duracao * DAY_WIDTH + "px";
 
-  habilitarDrag(bar, item, tipo);
+  drag(bar, item, tipo);
 
   area.appendChild(bar);
   row.appendChild(label);
@@ -129,10 +127,10 @@ function criarLinha(item, tipo, inicio, duracao) {
   gantt.appendChild(row);
 }
 
-/***************************************************
+/************************************************************
  * DRAG
- ***************************************************/
-function habilitarDrag(bar, item, tipo) {
+ ************************************************************/
+function drag(bar, item, tipo) {
   let startX, startLeft;
 
   bar.onmousedown = e => {
@@ -151,7 +149,6 @@ function habilitarDrag(bar, item, tipo) {
       d.setDate(d.getDate() + days);
 
       const iso = d.toISOString().slice(0, 10);
-
       if (tipo === "plan") item.data_inicio_plan = iso;
       if (tipo === "real") item.data_inicio_real = iso;
       if (tipo === "forecast") item.data_fim_forecast = iso;
@@ -159,13 +156,13 @@ function habilitarDrag(bar, item, tipo) {
   };
 }
 
-/***************************************************
+/************************************************************
  * SALVAR
- ***************************************************/
+ ************************************************************/
 async function salvarCronograma() {
   for (const i of itens) {
     await sb
-      .from("cronograma_estrutural")
+      .from("cronograma_estrutura")
       .update({
         data_inicio_plan: i.data_inicio_plan,
         data_inicio_real: i.data_inicio_real,
@@ -177,7 +174,7 @@ async function salvarCronograma() {
   alert("Cronograma salvo com sucesso");
 }
 
-/***************************************************
+/************************************************************
  * INIT
- ***************************************************/
+ ************************************************************/
 carregar();

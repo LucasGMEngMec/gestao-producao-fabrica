@@ -1,19 +1,16 @@
 /*************************************************
- * SUPABASE (CLIENTE ÚNICO)
+ * SUPABASE
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-if (!window.__SUPABASE__) {
-  window.__SUPABASE__ = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-}
-const sb = window.__SUPABASE__;
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /*************************************************
- * CONFIGURAÇÃO GERAL
+ * CONFIGURAÇÃO
  *************************************************/
-const DAY_WIDTH = 48;
-const TOTAL_DAYS = 210;
+const DAY_WIDTH = 42;
+const RANGE_DAYS = 240;
 
 /*************************************************
  * ELEMENTOS
@@ -21,7 +18,7 @@ const TOTAL_DAYS = 210;
 const gantt = document.getElementById("gantt");
 
 /*************************************************
- * UTILITÁRIOS
+ * UTIL
  *************************************************/
 const parseDate = d => new Date(d + "T00:00:00");
 const diffDays = (a, b) => Math.round((b - a) / 86400000);
@@ -33,7 +30,12 @@ let itens = [];
 let baseDate;
 
 /*************************************************
- * CARREGAR DADOS
+ * INIT
+ *************************************************/
+document.addEventListener("DOMContentLoaded", carregar);
+
+/*************************************************
+ * CARREGAR
  *************************************************/
 async function carregar() {
   gantt.innerHTML = "";
@@ -41,7 +43,7 @@ async function carregar() {
   const { data, error } = await sb
     .from("cronograma_estrutura")
     .select("*")
-    .order("ordem_prioridade", { ascending: true });
+    .order("ordem_prioridade");
 
   if (error) {
     console.error(error);
@@ -59,15 +61,15 @@ async function carregar() {
     }
   });
 
-  renderCabecalho();
-  renderLinhas();
-  renderHoje();
+  renderHeader();
+  renderRows();
+  renderTodayLine();
 }
 
 /*************************************************
- * CABEÇALHO FIXO (ANO / MÊS / DIA)
+ * HEADER (ANO / MÊS / DIA)
  *************************************************/
-function renderCabecalho() {
+function renderHeader() {
   const header = document.createElement("div");
   header.className = "gantt-header";
 
@@ -75,29 +77,31 @@ function renderCabecalho() {
   const rowMonth = document.createElement("div");
   const rowDay = document.createElement("div");
 
-  rowYear.className = rowMonth.className = rowDay.className = "header-row";
+  rowYear.className = "header-row year";
+  rowMonth.className = "header-row month";
+  rowDay.className = "header-row day";
 
-  let currentYear = null;
-  let currentMonth = null;
+  let lastYear = null;
+  let lastMonth = null;
 
-  for (let i = 0; i < TOTAL_DAYS; i++) {
+  for (let i = 0; i < RANGE_DAYS; i++) {
     const d = new Date(baseDate);
     d.setDate(d.getDate() + i);
 
     // DIA
     const day = document.createElement("div");
-    day.className = "day";
+    day.className = "cell";
     day.style.width = DAY_WIDTH + "px";
     day.innerText = d.getDate();
     rowDay.appendChild(day);
 
     // MÊS
-    if (d.getMonth() !== currentMonth) {
-      currentMonth = d.getMonth();
+    if (d.getMonth() !== lastMonth) {
+      lastMonth = d.getMonth();
       const m = document.createElement("div");
-      m.className = "month";
-      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
+      m.className = "cell";
       m.style.width = DAY_WIDTH + "px";
+      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
       rowMonth.appendChild(m);
     } else {
       rowMonth.lastChild.style.width =
@@ -105,12 +109,12 @@ function renderCabecalho() {
     }
 
     // ANO
-    if (d.getFullYear() !== currentYear) {
-      currentYear = d.getFullYear();
+    if (d.getFullYear() !== lastYear) {
+      lastYear = d.getFullYear();
       const y = document.createElement("div");
-      y.className = "year";
-      y.innerText = currentYear;
+      y.className = "cell";
       y.style.width = DAY_WIDTH + "px";
+      y.innerText = lastYear;
       rowYear.appendChild(y);
     } else {
       rowYear.lastChild.style.width =
@@ -125,17 +129,17 @@ function renderCabecalho() {
 }
 
 /*************************************************
- * LINHAS E BARRAS
+ * ROWS + BARRAS
  *************************************************/
-function renderLinhas() {
+function renderRows() {
   itens.forEach(item => {
     if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
 
     const row = document.createElement("div");
-    row.className = "row";
+    row.className = "gantt-row";
 
     const bar = document.createElement("div");
-    bar.className = "bar";
+    bar.className = "gantt-bar";
     bar.innerText =
       `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
@@ -143,7 +147,7 @@ function renderLinhas() {
     bar.style.left = diffDays(baseDate, inicio) * DAY_WIDTH + "px";
     bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
 
-    habilitarDrag(bar, item);
+    enableDrag(bar, item);
 
     row.appendChild(bar);
     gantt.appendChild(row);
@@ -153,10 +157,10 @@ function renderLinhas() {
 /*************************************************
  * DRAG HORIZONTAL
  *************************************************/
-function habilitarDrag(bar, item) {
+function enableDrag(bar, item) {
   let startX, startLeft;
 
-  bar.onmousedown = e => {
+  bar.addEventListener("mousedown", e => {
     startX = e.clientX;
     startLeft = parseInt(bar.style.left);
 
@@ -171,23 +175,18 @@ function habilitarDrag(bar, item) {
       nova.setDate(nova.getDate() + dias);
       item.data_inicio_plan = nova.toISOString().slice(0, 10);
     };
-  };
+  });
 }
 
 /*************************************************
- * MARCADOR DO DIA ATUAL
+ * LINHA DO DIA ATUAL
  *************************************************/
-function renderHoje() {
+function renderTodayLine() {
   const hoje = diffDays(baseDate, new Date()) * DAY_WIDTH;
 
-  const linha = document.createElement("div");
-  linha.className = "today-line";
-  linha.style.left = hoje + "px";
+  const line = document.createElement("div");
+  line.className = "today-line";
+  line.style.left = hoje + "px";
 
-  gantt.appendChild(linha);
+  gantt.appendChild(line);
 }
-
-/*************************************************
- * INIT
- *************************************************/
-document.addEventListener("DOMContentLoaded", carregar);

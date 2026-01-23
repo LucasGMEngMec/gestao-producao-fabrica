@@ -1,5 +1,5 @@
 /*************************************************
- * SUPABASE CONFIG (REST)
+ * CONFIGURAÇÃO SUPABASE (REST)
  *************************************************/
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
@@ -12,21 +12,33 @@ const DAY_WIDTH = 40;
 const gantt = document.getElementById("gantt");
 
 /*************************************************
- * ESTADO
+ * ESTADO GLOBAL
  *************************************************/
 let itens = [];
-let inicioGlobal;
+let inicioGlobal = null;
 let fornecedorAtual = null;
 
 /*************************************************
- * DATAS
+ * DATAS – BLINDADAS
  *************************************************/
-const parseDate = d => new Date(d + "T00:00:00");
-const formatDate = d => d.toISOString().slice(0, 10);
-const diffDays = (a, b) => Math.round((b - a) / 86400000);
+function parseDate(d) {
+  if (!d) return null;
+  const date = new Date(d + "T00:00:00");
+  return isNaN(date) ? null : date;
+}
+
+function formatDate(d) {
+  if (!(d instanceof Date) || isNaN(d)) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function diffDays(a, b) {
+  if (!a || !b) return 0;
+  return Math.round((b - a) / 86400000);
+}
 
 /*************************************************
- * LOAD
+ * CARREGAR DADOS
  *************************************************/
 async function carregar() {
   const res = await fetch(
@@ -41,25 +53,32 @@ async function carregar() {
 
   itens = await res.json();
 
-  // Normalizar prioridade
+  // Normalizar prioridades
   itens.forEach((i, idx) => {
     if (i.ordem_prioridade == null) i.ordem_prioridade = idx + 1;
   });
 
-  inicioGlobal = new Date(Math.min(
-    ...itens.map(i => parseDate(i.data_inicio_plan))
-  ));
+  // Definir início global válido
+  const datasValidas = itens
+    .map(i => parseDate(i.data_inicio_plan))
+    .filter(Boolean);
+
+  inicioGlobal = datasValidas.length
+    ? new Date(Math.min(...datasValidas))
+    : new Date();
 
   montarAbas();
 }
 
 /*************************************************
- * ABAS POR FORNECEDOR
+ * ABAS POR FORNECEDOR (SEM DUPLICAR)
  *************************************************/
 function montarAbas() {
   gantt.innerHTML = "";
 
-  const fornecedores = [...new Set(itens.map(i => i.fornecedor || "SEM FORNECEDOR"))];
+  const fornecedores = [
+    ...new Set(itens.map(i => i.fornecedor || "SEM FORNECEDOR"))
+  ];
 
   const tabs = document.createElement("div");
   tabs.style.marginBottom = "16px";
@@ -68,10 +87,12 @@ function montarAbas() {
     const btn = document.createElement("button");
     btn.innerText = f;
     btn.style.marginRight = "8px";
+
     btn.onclick = () => {
       fornecedorAtual = f;
       render();
     };
+
     tabs.appendChild(btn);
   });
 
@@ -82,9 +103,12 @@ function montarAbas() {
 }
 
 /*************************************************
- * RENDER
+ * RENDER (LIMPA ANTES DE DESENHAR)
  *************************************************/
 function render() {
+  const antigo = document.getElementById("areaGantt");
+  if (antigo) antigo.remove();
+
   const area = document.createElement("div");
   area.id = "areaGantt";
 
@@ -119,7 +143,7 @@ function criarTimeline(container) {
 }
 
 /*************************************************
- * LINHA + DRAG DUPLO
+ * LINHA + PRIORIDADE
  *************************************************/
 function criarLinha(container, item) {
   const row = document.createElement("div");
@@ -139,7 +163,9 @@ function criarLinha(container, item) {
 
   const label = document.createElement("div");
   label.className = "label";
-  label.innerHTML = `<b>PLAN</b> - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+  label.innerHTML = `
+    <b>PLAN</b> - ${item.obra} - ${item.instalacao} - ${item.estrutura}
+  `;
 
   const area = document.createElement("div");
   area.className = "bar-area";
@@ -149,8 +175,10 @@ function criarLinha(container, item) {
   bar.innerText = "PLANEJADO";
 
   const inicio = parseDate(item.data_inicio_plan);
-  bar.style.left = diffDays(inicioGlobal, inicio) * DAY_WIDTH + "px";
-  bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
+  const offset = inicio ? diffDays(inicioGlobal, inicio) : 0;
+
+  bar.style.left = offset * DAY_WIDTH + "px";
+  bar.style.width = (item.duracao_planejada_dias || 1) * DAY_WIDTH + "px";
 
   habilitarDragHorizontal(bar, item);
 
@@ -161,14 +189,14 @@ function criarLinha(container, item) {
 }
 
 /*************************************************
- * DRAG HORIZONTAL (DATAS)
+ * DRAG HORIZONTAL (DATAS – SEGURO)
  *************************************************/
 function habilitarDragHorizontal(bar, item) {
   let startX, startLeft;
 
   bar.onmousedown = e => {
     startX = e.clientX;
-    startLeft = parseInt(bar.style.left);
+    startLeft = parseInt(bar.style.left) || 0;
 
     document.onmousemove = ev => {
       bar.style.left = startLeft + (ev.clientX - startX) + "px";
@@ -178,11 +206,15 @@ function habilitarDragHorizontal(bar, item) {
       document.onmousemove = null;
       document.onmouseup = null;
 
-      const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
+      const left = parseInt(bar.style.left);
+      if (isNaN(left)) return;
+
+      const dias = Math.round(left / DAY_WIDTH);
       const novaData = new Date(inicioGlobal);
       novaData.setDate(novaData.getDate() + dias);
 
-      item.data_inicio_plan = formatDate(novaData);
+      const formatada = formatDate(novaData);
+      if (formatada) item.data_inicio_plan = formatada;
     };
   };
 }
@@ -193,13 +225,12 @@ function habilitarDragHorizontal(bar, item) {
 function atualizarPrioridade(idOrigem, idDestino) {
   const a = itens.find(i => i.id == idOrigem);
   const b = itens.find(i => i.id == idDestino);
+  if (!a || !b) return;
 
-  const temp = a.ordem_prioridade;
-  a.ordem_prioridade = b.ordem_prioridade;
-  b.ordem_prioridade = temp;
+  [a.ordem_prioridade, b.ordem_prioridade] =
+    [b.ordem_prioridade, a.ordem_prioridade];
 
-  gantt.innerHTML = "";
-  montarAbas();
+  render();
 }
 
 /*************************************************

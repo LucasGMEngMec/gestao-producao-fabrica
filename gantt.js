@@ -1,17 +1,26 @@
-/* ================== SUPABASE ================== */
-const supabaseClient = supabase.createClient(
-  "https://dkjmejmjovtcdalicnhu.supabase.co",
-  "sb_publishable_cpq_melwicz13c9vpmkFQw_OOAzH2At"
+/*************************************************
+ * SUPABASE CONFIG
+ *************************************************/
+const SUPABASE_URL = "https://dklmejmlovtcadlinchu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cpq_mwiczl3c9vpmtKj0w_QOAZH2At";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
 );
 
-/* ================== GANTT ================== */
+/*************************************************
+ * GANTT CONFIG
+ *************************************************/
 const gantt = document.getElementById("gantt");
 const DAY_WIDTH = 40;
 
 let itens = [];
 let inicioGlobal;
 
-/* ========= DATA ========= */
+/*************************************************
+ * UTILS
+ *************************************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
 }
@@ -20,18 +29,20 @@ function diffDays(a, b) {
   return Math.round((b - a) / 86400000);
 }
 
-/* ========= LOAD ========= */
+/*************************************************
+ * LOAD DATA
+ *************************************************/
 async function carregar() {
   gantt.innerHTML = "";
 
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from("cronograma_estrutural")
     .select("*")
     .order("ordem_prioridade");
 
   if (error) {
+    alert("Erro Supabase: " + error.message);
     console.error(error);
-    alert("Erro ao carregar dados");
     return;
   }
 
@@ -49,7 +60,9 @@ async function carregar() {
   itens.forEach(criarEstrutura);
 }
 
-/* ========= TIMELINE ========= */
+/*************************************************
+ * TIMELINE
+ *************************************************/
 function criarTimeline() {
   const t = document.createElement("div");
   t.className = "timeline";
@@ -67,25 +80,32 @@ function criarTimeline() {
   gantt.appendChild(t);
 }
 
-/* ========= STRUCT ========= */
+/*************************************************
+ * STRUCTURE
+ *************************************************/
 function criarEstrutura(item) {
   criarLinha(item, "plan", item.data_inicio_plan, item.duracao_planejada_dias);
 
-  if (item.data_inicio_real)
+  if (item.data_inicio_real) {
     criarLinha(item, "real", item.data_inicio_real, item.duracao_planejada_dias);
+  }
 
   if (item.data_fim_forecast) {
-    const inicio = item.data_inicio_real || item.data_inicio_plan;
-    const duracao = diffDays(
-      parseDate(inicio),
-      parseDate(item.data_fim_forecast)
+    criarLinha(
+      item,
+      "forecast",
+      item.data_inicio_real || item.data_inicio_plan,
+      diffDays(
+        parseDate(item.data_inicio_real || item.data_inicio_plan),
+        parseDate(item.data_fim_forecast)
+      )
     );
-
-    criarLinha(item, "forecast", inicio, duracao);
   }
 }
 
-/* ========= ROW ========= */
+/*************************************************
+ * ROW
+ *************************************************/
 function criarLinha(item, tipo, inicio, duracao) {
   if (!inicio || !duracao) return;
 
@@ -115,7 +135,9 @@ function criarLinha(item, tipo, inicio, duracao) {
   gantt.appendChild(row);
 }
 
-/* ========= DRAG ========= */
+/*************************************************
+ * DRAG
+ *************************************************/
 function drag(bar, item, tipo) {
   let startX, startLeft;
 
@@ -135,7 +157,6 @@ function drag(bar, item, tipo) {
       d.setDate(d.getDate() + days);
 
       const iso = d.toISOString().slice(0, 10);
-
       if (tipo === "plan") item.data_inicio_plan = iso;
       if (tipo === "real") item.data_inicio_real = iso;
       if (tipo === "forecast") item.data_fim_forecast = iso;
@@ -143,10 +164,12 @@ function drag(bar, item, tipo) {
   };
 }
 
-/* ========= SAVE ========= */
+/*************************************************
+ * SAVE
+ *************************************************/
 async function salvarCronograma() {
   for (const i of itens) {
-    const { error } = await supabaseClient
+    await supabase
       .from("cronograma_estrutural")
       .update({
         data_inicio_plan: i.data_inicio_plan,
@@ -154,16 +177,11 @@ async function salvarCronograma() {
         data_fim_forecast: i.data_fim_forecast
       })
       .eq("id", i.id);
-
-    if (error) {
-      console.error(error);
-      alert("Erro ao salvar cronograma");
-      return;
-    }
   }
-
   alert("Cronograma salvo com sucesso");
 }
 
-/* ========= INIT ========= */
+/*************************************************
+ * INIT
+ *************************************************/
 carregar();

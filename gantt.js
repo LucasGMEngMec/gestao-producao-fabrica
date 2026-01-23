@@ -1,26 +1,25 @@
-/*********************************
- * SUPABASE
- *********************************/
-const supabaseUrl = "https://dkmejmovtcdalcinhu.supabase.co";
+/*************************************************
+ * CONFIGURAÇÃO SUPABASE
+ *************************************************/
+const supabaseUrl = "https://dklmejmlovtcdalicnhu.supabase.co";
 const supabaseKey = "SUA_PUBLISHABLE_KEY_AQUI";
 
-const sb = window.supabase.createClient(
-  supabaseUrl,
-  supabaseKey
-);
+/* CLIENTE DEFINITIVO — NOME ÚNICO */
+const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-/*********************************
- * VARIÁVEIS
- *********************************/
+/*************************************************
+ * VARIÁVEIS GERAIS
+ *************************************************/
 const gantt = document.getElementById("gantt");
-const DAY_WIDTH = 40;
+const btnSalvar = document.getElementById("btnSalvar");
 
+const DAY_WIDTH = 40;
 let itens = [];
 let inicioGlobal;
 
-/*********************************
- * DATAS
- *********************************/
+/*************************************************
+ * FUNÇÕES DE DATA
+ *************************************************/
 function parseDate(d) {
   return new Date(d + "T00:00:00");
 }
@@ -29,15 +28,16 @@ function diffDays(a, b) {
   return Math.round((b - a) / 86400000);
 }
 
-/*********************************
- * LOAD
- *********************************/
+/*************************************************
+ * CARREGAR DADOS
+ *************************************************/
 async function carregar() {
   gantt.innerHTML = "";
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("cronograma_estrutura")
-    .select("*");
+    .select("*")
+    .order("ordem_prioridade");
 
   if (error) {
     console.error(error);
@@ -59,9 +59,9 @@ async function carregar() {
   itens.forEach(criarEstrutura);
 }
 
-/*********************************
+/*************************************************
  * TIMELINE
- *********************************/
+ *************************************************/
 function criarTimeline() {
   const t = document.createElement("div");
   t.className = "timeline";
@@ -79,9 +79,9 @@ function criarTimeline() {
   gantt.appendChild(t);
 }
 
-/*********************************
- * ESTRUTURA
- *********************************/
+/*************************************************
+ * ESTRUTURAS
+ *************************************************/
 function criarEstrutura(item) {
   criarLinha(item, "plan", item.data_inicio_plan, item.duracao_planejada_dias);
 
@@ -102,9 +102,9 @@ function criarEstrutura(item) {
   }
 }
 
-/*********************************
- * LINHA
- *********************************/
+/*************************************************
+ * LINHAS
+ *************************************************/
 function criarLinha(item, tipo, inicio, duracao) {
   if (!inicio || !duracao) return;
 
@@ -134,9 +134,9 @@ function criarLinha(item, tipo, inicio, duracao) {
   gantt.appendChild(row);
 }
 
-/*********************************
+/*************************************************
  * DRAG
- *********************************/
+ *************************************************/
 function drag(bar, item, tipo) {
   let startX, startLeft;
 
@@ -164,12 +164,12 @@ function drag(bar, item, tipo) {
   };
 }
 
-/*********************************
- * SAVE
- *********************************/
+/*************************************************
+ * SALVAR
+ *************************************************/
 async function salvarCronograma() {
   for (const i of itens) {
-    await supabase
+    await sb
       .from("cronograma_estrutura")
       .update({
         data_inicio_plan: i.data_inicio_plan,
@@ -179,10 +179,15 @@ async function salvarCronograma() {
       .eq("id", i.id);
   }
 
-  alert("Cronograma salvo");
+  alert("Cronograma salvo com sucesso");
 }
 
-/*********************************
+/*************************************************
+ * EVENTOS
+ *************************************************/
+btnSalvar.onclick = salvarCronograma;
+
+/*************************************************
  * INIT
- *********************************/
+ *************************************************/
 carregar();

@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
 
+  <!-- SUPABASE SDK (apenas carrega a biblioteca) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       margin: 20px;
     }
 
@@ -14,85 +17,76 @@
       text-align: center;
     }
 
+    #toolbar {
+      margin-bottom: 10px;
+    }
+
     #gantt {
-      position: relative;
+      border: 1px solid #ccc;
       overflow-x: auto;
-      border-top: 1px solid #ccc;
+      padding: 10px;
     }
 
     .timeline {
       display: flex;
       position: sticky;
       top: 0;
-      background: #fff;
+      background: #f5f5f5;
       z-index: 2;
     }
 
     .day {
       width: 40px;
-      border-right: 1px solid #eee;
       text-align: center;
       font-size: 12px;
+      border-right: 1px solid #ddd;
     }
 
     .row {
       display: flex;
-      border-bottom: 1px solid #eee;
+      align-items: center;
+      margin: 4px 0;
     }
 
     .label {
       width: 220px;
-      padding: 5px;
       font-size: 12px;
-      background: #fafafa;
-      border-right: 1px solid #ddd;
+      border-right: 1px solid #ccc;
+      padding-right: 5px;
     }
 
     .bar-area {
       position: relative;
-      flex: 1;
-      height: 36px;
+      height: 24px;
+      flex-grow: 1;
     }
 
     .bar {
       position: absolute;
-      top: 6px;
-      height: 24px;
-      color: #fff;
+      height: 20px;
+      border-radius: 4px;
       font-size: 10px;
-      line-height: 24px;
-      text-align: center;
-      cursor: grab;
-    }
-
-    .plan { background: #2196f3; }
-    .real { background: #4caf50; }
-    .forecast { background: #ff9800; }
-
-    button {
-      margin: 10px 0;
-      padding: 8px 12px;
-      background: #2e7d32;
       color: #fff;
-      border: none;
-      cursor: pointer;
+      padding: 2px 4px;
+      cursor: move;
     }
+
+    .plan { background: #1976d2; }
+    .real { background: #388e3c; }
+    .forecast { background: #f57c00; }
   </style>
 </head>
 
 <body>
+  <h1>Cronograma de Produção — Gantt</h1>
 
-<h1>Cronograma de Produção — Gantt</h1>
+  <div id="toolbar">
+    <button id="btnSalvar">Salvar Cronograma</button>
+  </div>
 
-<button onclick="salvarCronograma()">Salvar Cronograma</button>
+  <div id="gantt"></div>
 
-<div id="gantt"></div>
-
-<!-- SUPABASE (CARREGADO UMA ÚNICA VEZ) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- SCRIPT DO GANTT -->
-<script src="gantt.js"></script>
-
+  <!-- SCRIPT DA APLICAÇÃO -->
+  <script src="gantt.js"></script>
 </body>
 </html>

@@ -20,14 +20,8 @@ const gantt = document.getElementById("gantt");
 /*************************************************
  * UTILS
  *************************************************/
-const parseDate = d => new Date(d + "T00:00:00");
+const parseDate = d => new Date(d);
 const diffDays = (a, b) => Math.round((b - a) / 86400000);
-
-/*************************************************
- * STATE
- *************************************************/
-let itens = [];
-let baseDate;
 
 /*************************************************
  * INIT
@@ -51,25 +45,31 @@ async function carregar() {
     return;
   }
 
-  itens = data || [];
+  if (!data || data.length === 0) {
+    console.warn("Tabela sem registros");
+    return;
+  }
 
-  baseDate = new Date();
+  const itens = data;
+
+  // Base do cronograma = menor data criada
+  let baseDate = new Date();
   itens.forEach(i => {
-    if (i.data_inicio_plan) {
-      const d = parseDate(i.data_inicio_plan);
+    if (i.criado_em) {
+      const d = parseDate(i.criado_em);
       if (d < baseDate) baseDate = d;
     }
   });
 
-  renderHeader();
-  renderBody();
-  renderTodayLine();
+  renderHeader(baseDate);
+  renderBody(baseDate, itens);
+  renderTodayLine(baseDate);
 }
 
 /*************************************************
  * HEADER
  *************************************************/
-function renderHeader() {
+function renderHeader(baseDate) {
   const header = document.createElement("div");
   header.className = "gantt-header";
 
@@ -88,14 +88,14 @@ function renderHeader() {
     const d = new Date(baseDate);
     d.setDate(d.getDate() + i);
 
-    // DAY
+    // DIA
     const day = document.createElement("div");
     day.className = "cell";
     day.style.width = DAY_WIDTH + "px";
     day.innerText = d.getDate();
     dayRow.appendChild(day);
 
-    // MONTH
+    // MÊS
     if (d.getMonth() !== lastMonth) {
       lastMonth = d.getMonth();
       const m = document.createElement("div");
@@ -108,7 +108,7 @@ function renderHeader() {
         parseInt(monthRow.lastChild.style.width) + DAY_WIDTH + "px";
     }
 
-    // YEAR
+    // ANO
     if (d.getFullYear() !== lastYear) {
       lastYear = d.getFullYear();
       const y = document.createElement("div");
@@ -131,26 +131,31 @@ function renderHeader() {
 /*************************************************
  * BODY + BARS
  *************************************************/
-function renderBody() {
+function renderBody(baseDate, itens) {
   const body = document.createElement("div");
   body.className = "gantt-body";
 
   itens.forEach(item => {
-    if (!item.data_inicio_plan || !item.duracao_planejada_dias) return;
+    if (!item.duracao_planejada_dias) return;
 
     const row = document.createElement("div");
     row.className = "gantt-row";
 
     const bar = document.createElement("div");
     bar.className = "gantt-bar";
+
     bar.innerText =
-      `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+      `PLAN - ${item.instalacao} - ${item.estrutura}`;
 
-    const inicio = parseDate(item.data_inicio_plan);
-    bar.style.left = diffDays(baseDate, inicio) * DAY_WIDTH + "px";
-    bar.style.width = item.duracao_planejada_dias * DAY_WIDTH + "px";
+    const inicio = item.criado_em
+      ? parseDate(item.criado_em)
+      : baseDate;
 
-    enableDrag(bar, item);
+    bar.style.left =
+      diffDays(baseDate, inicio) * DAY_WIDTH + "px";
+
+    bar.style.width =
+      item.duracao_planejada_dias * DAY_WIDTH + "px";
 
     row.appendChild(bar);
     body.appendChild(row);
@@ -160,35 +165,9 @@ function renderBody() {
 }
 
 /*************************************************
- * DRAG
- *************************************************/
-function enableDrag(bar, item) {
-  let startX, startLeft;
-
-  bar.addEventListener("mousedown", e => {
-    startX = e.clientX;
-    startLeft = parseInt(bar.style.left);
-
-    document.onmousemove = ev => {
-      bar.style.left = startLeft + (ev.clientX - startX) + "px";
-    };
-
-    document.onmouseup = () => {
-      document.onmousemove = null;
-
-      const dias = Math.round(parseInt(bar.style.left) / DAY_WIDTH);
-      const nova = new Date(baseDate);
-      nova.setDate(nova.getDate() + dias);
-
-      item.data_inicio_plan = nova.toISOString().slice(0, 10);
-    };
-  });
-}
-
-/*************************************************
  * TODAY LINE
  *************************************************/
-function renderTodayLine() {
+function renderTodayLine(baseDate) {
   const pos = diffDays(baseDate, new Date()) * DAY_WIDTH;
 
   const line = document.createElement("div");

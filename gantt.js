@@ -4,7 +4,7 @@
 const supabaseUrl = "https://dkmejmovtcdalcinhu.supabase.co";
 const supabaseKey = "SUA_PUBLISHABLE_KEY_AQUI";
 
-const supabase = window.supabase.createClient(
+const sb = window.supabase.createClient(
   supabaseUrl,
   supabaseKey
 );

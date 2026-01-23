@@ -69,27 +69,73 @@ async function carregar() {
  * TIMELINE
  *************************************************/
 function criarTimeline() {
-  const t = document.createElement("div");
-  t.className = "timeline";
+  const wrapper = document.createElement("div");
+
+  const years = document.createElement("div");
+  const months = document.createElement("div");
+  const days = document.createElement("div");
+
+  years.className = "timeline";
+  months.className = "timeline";
+  days.className = "timeline";
+
+  let lastYear = null;
+  let lastMonth = null;
 
   for (let i = 0; i < 120; i++) {
     const d = new Date(inicioGlobal);
     d.setDate(d.getDate() + i);
 
-    const c = document.createElement("div");
-    c.className = "day";
-    c.innerText = d.getDate();
-    t.appendChild(c);
+    /* ===== ANO ===== */
+    if (d.getFullYear() !== lastYear) {
+      const y = document.createElement("div");
+      y.className = "day";
+      y.style.width = DAY_WIDTH + "px";
+      y.innerText = d.getFullYear();
+      years.appendChild(y);
+      lastYear = d.getFullYear();
+    } else {
+      const e = document.createElement("div");
+      e.className = "day";
+      years.appendChild(e);
+    }
+
+    /* ===== MÊS ===== */
+    if (d.getMonth() !== lastMonth) {
+      const m = document.createElement("div");
+      m.className = "day";
+      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
+      months.appendChild(m);
+      lastMonth = d.getMonth();
+    } else {
+      const e = document.createElement("div");
+      e.className = "day";
+      months.appendChild(e);
+    }
+
+    /* ===== DIA ===== */
+    const day = document.createElement("div");
+    day.className = "day";
+    day.innerText = d.getDate();
+    days.appendChild(day);
   }
 
-  gantt.appendChild(t);
+  wrapper.appendChild(years);
+  wrapper.appendChild(months);
+  wrapper.appendChild(days);
+
+  gantt.appendChild(wrapper);
 }
 
 /*************************************************
  * LINHAS
  *************************************************/
 function criarEstrutura(item) {
-  criarLinha(item, "plan", item.data_inicio_plan, item.duracao_planejada_dias);
+  const inicioPlan =
+    item.data_inicio_plan ||
+    new Date().toISOString().slice(0, 10); // fallback seguro
+
+  criarLinha(item, "plan", inicioPlan, item.duracao_planejada_dias);
 
   if (item.data_inicio_real)
     criarLinha(item, "real", item.data_inicio_real, item.duracao_planejada_dias);
@@ -98,9 +144,9 @@ function criarEstrutura(item) {
     criarLinha(
       item,
       "forecast",
-      item.data_inicio_real || item.data_inicio_plan,
+      item.data_inicio_real || inicioPlan,
       diffDays(
-        parseDate(item.data_inicio_real || item.data_inicio_plan),
+        parseDate(item.data_inicio_real || inicioPlan),
         parseDate(item.data_fim_forecast)
       )
     );

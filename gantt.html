@@ -1,189 +1,45 @@
-/*************************************************
- * SUPABASE CLIENT (VERSÃO ÚNICA E CORRETA)*
- *************************************************/
-const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY =
-  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cronograma de Produção — Gantt</title>
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+  <!-- SUPABASE CDN (apenas uma vez) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-/*************************************************
- * CONSTANTES E VARIÁVEIS
- *************************************************/
-const gantt = document.getElementById("gantt");
-const btnSalvar = document.getElementById("btnSalvar");
-const DAY_WIDTH = 40;
-
-let itens = [];
-let inicioGlobal = null;
-
-/*************************************************
- * FUNÇÕES DE DATA
- *************************************************/
-function parseDate(d) {
-  return new Date(d + "T00:00:00");
-}
-
-function diffDays(a, b) {
-  return Math.round((b - a) / 86400000);
-}
-
-/*************************************************
- * CARREGAR DADOS DO SUPABASE
- *************************************************/
-async function carregarDados() {
-  gantt.innerHTML = "";
-
-  const { data, error } = await supabaseClient
-    .from("cronograma_estrutura")
-    .select("*")
-    .order("instalacao");
-
-  if (error) {
-    console.error(error);
-    alert("Erro ao carregar dados do Supabase");
-    return;
-  }
-
-  itens = data;
-
-  /* ===== DATA INICIAL GLOBAL ===== */
-  inicioGlobal = new Date();
-
-  itens.forEach(i => {
-    if (i.data_inicio_plan) {
-      const d = parseDate(i.data_inicio_plan);
-      if (d < inicioGlobal) inicioGlobal = d;
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .timeline { display: flex; }
+    .day {
+      width: 40px;
+      border-right: 1px solid #ddd;
+      text-align: center;
+      font-size: 12px;
     }
-  });
+    .row { display: flex; margin-bottom: 6px; }
+    .label { width: 220px; font-size: 12px; }
+    .bar-area { position: relative; height: 22px; flex: 1; }
+    .bar {
+      position: absolute;
+      height: 22px;
+      color: #fff;
+      font-size: 11px;
+      text-align: center;
+      cursor: pointer;
+    }
+        .plan { background: #3b82f6; }
+    .real { background: #16a34a; }
+    .forecast { background: #f59e0b; }
+  </style>
+</head>
+<body>
 
-  criarTimeline();
-  itens.forEach(criarEstrutura);
-}
+<h2>Cronograma de Produção — Gantt</h2>
+<button id="btnSalvar">Salvar Cronograma</button>
 
-/*************************************************
- * TIMELINE (ANO / MÊS / DIA)
- *************************************************/
-function criarTimeline() {
-  const container = document.createElement("div");
+<div id="gantt"></div>
 
-  const linhaAno = document.createElement("div");
-  const linhaMes = document.createElement("div");
-  const linhaDia = document.createElement("div");
-
-  linhaAno.className = "timeline";
-  linhaMes.className = "timeline";
-  linhaDia.className = "timeline";
-
-  let anoAtual = null;
-  let mesAtual = null;
-
-  for (let i = 0; i < 120; i++) {
-    const d = new Date(inicioGlobal);
-    d.setDate(d.getDate() + i);
-
-    /* ===== ANO ===== */
-    const anoDiv = document.createElement("div");
-    anoDiv.className = "day";
-    anoDiv.innerText = d.getFullYear() !== anoAtual ? d.getFullYear() : "";
-    linhaAno.appendChild(anoDiv);
-    anoAtual = d.getFullYear();
-
-    /* ===== MÊS ===== */
-    const mesDiv = document.createElement("div");
-    mesDiv.className = "day";
-    mesDiv.innerText =
-      d.getMonth() !== mesAtual
-        ? d.toLocaleString("pt-BR", { month: "short" })
-        : "";
-    linhaMes.appendChild(mesDiv);
-    mesAtual = d.getMonth();
-
-    /* ===== DIA ===== */
-    const diaDiv = document.createElement("div");
-    diaDiv.className = "day";
-    diaDiv.innerText = d.getDate();
-    linhaDia.appendChild(diaDiv);
-  }
-
-  container.appendChild(linhaAno);
-  container.appendChild(linhaMes);
-  container.appendChild(linhaDia);
-  gantt.appendChild(container);
-}
-
-/*************************************************
- * CRIAÇÃO DAS LINHAS DO GANTT
- *************************************************/
-function criarEstrutura(item) {
-  const inicioPlan =
-    item.data_inicio_plan ||
-    new Date().toISOString().slice(0, 10);
-
-  criarLinha(item, "plan", inicioPlan, item.duracao_planejada_dias);
-
-  if (item.data_inicio_real)
-    criarLinha(
-      item,
-      "real",
-      item.data_inicio_real,
-      item.duracao_planejada_dias
-    );
-
-  if (item.data_fim_forecast) {
-    const inicio = item.data_inicio_real || inicioPlan;
-    criarLinha(
-      item,
-      "forecast",
-      inicio,
-      diffDays(parseDate(inicio), parseDate(item.data_fim_forecast))
-    );
-  }
-}
-
-function criarLinha(item, tipo, inicio, duracao) {
-  if (!inicio || !duracao) return;
-
-  const row = document.createElement("div");
-  row.className = "row";
-
-  const label = document.createElement("div");
-  label.className = "label";
-  label.innerHTML = `
-    <b>${item.estrutura}</b><br>
-    ${item.instalacao}
-  `;
-
-  const area = document.createElement("div");
-  area.className = "bar-area";
-
-  const bar = document.createElement("div");
-  bar.className = `bar ${tipo}`;
-  bar.innerText = tipo.toUpperCase();
-
-  const inicioDate = parseDate(inicio);
-
-  bar.style.left =
-    diffDays(inicioGlobal, inicioDate) * DAY_WIDTH + "px";
-  bar.style.width = duracao * DAY_WIDTH + "px";
-
-  area.appendChild(bar);
-  row.appendChild(label);
-  row.appendChild(area);
-  gantt.appendChild(row);
-}
-
-/*************************************************
- * SALVAR (PLACEHOLDER FUNCIONAL)
- *************************************************/
-btnSalvar.onclick = async () => {
-  alert("Salvar acionado (persistência pode ser expandida)");
-};
-
-/*************************************************
- * INIT
- *************************************************/
-carregarDados();
+<!-- SEU JS -->
+<script src="gantt.js"></script>
+</body>
+</html>

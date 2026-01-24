@@ -72,6 +72,7 @@ button {
       <th>Instalação</th>
       <th>Estrutura</th>
       <th>Duração (dias úteis)</th>
+      <th>Data de início</th>
       <th>Ação</th>
     </tr>
   </thead>
@@ -138,6 +139,7 @@ function addLinha() {
     <td>${selectHTML(listas.instalacoes)}</td>
     <td>${selectHTML(listas.estruturas)}</td>
     <td><input type="number" min="1"></td>
+    <td><input type="date"></td>
     <td><button class="remover">🗑️</button></td>
   `;
   tr.querySelector(".remover").onclick = () => tr.remove();
@@ -150,9 +152,14 @@ async function salvarCronograma() {
 
   for (const tr of tbody.querySelectorAll("tr")) {
     const selects = tr.querySelectorAll("select");
-    const duracao = tr.querySelector("input");
+    const duracao = tr.querySelector('input[type="number"]');
+    const dataInicio = tr.querySelector('input[type="date"]');
 
-    if (![...selects].every(s => s.value) || !duracao.value) {
+    if (
+      ![...selects].every(s => s.value) ||
+      !duracao.value ||
+      !dataInicio.value
+    ) {
       alert("Preencha todas as células.");
       return;
     }
@@ -163,7 +170,8 @@ async function salvarCronograma() {
       obra: selects[2].value,
       instalacao: selects[3].value,
       estrutura: selects[4].value,
-      duracao_planejada_dias: Number(duracao.value)
+      duracao_planejada_dias: Number(duracao.value),
+      data_inicio: dataInicio.value
     });
   }
 
@@ -190,20 +198,3 @@ addLinha();
 
 </body>
 </html>
-
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-  const supabase = createClient(
-    "SUA_URL",
-    "SUA_CHAVE"
-  );
-
-  async function salvarCronograma() {
-    // coleta dados
-    // valida
-    // insert no Supabase
-  }
-
-  window.salvarCronograma = salvarCronograma;
-</script>

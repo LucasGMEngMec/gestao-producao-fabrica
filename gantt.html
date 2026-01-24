@@ -5,7 +5,7 @@
   <title>Cronograma de Produção — Gantt</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- SUPABASE JS -->
+  <!-- SUPABASE -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     window.createSupabaseClient = createClient;
@@ -107,11 +107,19 @@
       background: #e5e7eb;
     }
 
+    .today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: red;
+      z-index: 3;
+    }
+
     .day-label {
       position: absolute;
       top: 32px;
       font-size: 11px;
-      color: #475569;
       transform: translateX(-50%);
     }
 
@@ -133,15 +141,13 @@
       font-size: 12px;
       padding: 4px 8px;
       cursor: grab;
-      background: #2563eb;
       color: #fff;
       user-select: none;
     }
 
-    .bar:active {
-      cursor: grabbing;
-      opacity: 0.85;
-    }
+    .bar.plan { background: #2563eb; }
+    .bar.real { background: #16a34a; }
+    .bar.forecast { background: #f59e0b; }
 
     /* MODAL */
     .modal {
@@ -158,45 +164,50 @@
       background: #fff;
       padding: 20px;
       border-radius: 8px;
-      width: 400px;
+      width: 420px;
     }
 
     .modal-content h3 {
       margin-top: 0;
     }
 
-    .modal-content button {
-      margin-top: 12px;
-      padding: 6px 12px;
+    .modal-content label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    .modal-content select {
+      width: 100%;
+      padding: 6px;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="topbar">Cronograma de Produção — Gantt</div>
+<div class="topbar">Cronograma de Produção — Gantt</div>
 
-  <div class="controls">
-    <strong>Zoom:</strong>
-    <button data-zoom="15">60</button>
-    <button data-zoom="30" class="active">30</button>
-    <button data-zoom="60">15</button>
+<div class="controls">
+  <strong>Zoom:</strong>
+  <button data-zoom="15">15</button>
+  <button data-zoom="30" class="active">30</button>
+  <button data-zoom="60">60</button>
 
-    <button class="save" id="btnSalvar">Salvar Cronograma</button>
-  </div>
+  <button class="save" id="btnSalvar">Salvar Cronograma</button>
+</div>
 
-  <div id="fornecedor"></div>
+<div id="fornecedor"></div>
 
-  <div id="gantt-wrapper">
-    <div id="gantt-header"></div>
-    <div id="gantt"></div>
-  </div>
+<div id="gantt-wrapper">
+  <div id="gantt-header"></div>
+  <div id="gantt"></div>
+</div>
 
-  <!-- MODAL -->
-  <div class="modal" id="modal">
-    <div class="modal-content" id="modalContent"></div>
-  </div>
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent"></div>
+</div>
 
-  <script type="module" src="gantt.js"></script>
+<script type="module" src="gantt.js"></script>
 </body>
 </html>

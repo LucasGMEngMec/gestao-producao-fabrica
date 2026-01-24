@@ -1,178 +1,180 @@
-/*************************************************
- * SUPABASE
- *************************************************/
-const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cronograma de Produção — Gantt</title>
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <!-- SUPABASE (apenas uma vez) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-/*************************************************
- * CONFIG
- *************************************************/
-const DAY_WIDTH = 42;
-const RANGE_DAYS = 240;
-
-/*************************************************
- * DOM
- *************************************************/
-const gantt = document.getElementById("gantt");
-
-/*************************************************
- * UTILS
- *************************************************/
-const parseDate = d => new Date(d);
-const diffDays = (a, b) => Math.round((b - a) / 86400000);
-
-/*************************************************
- * INIT
- *************************************************/
-document.addEventListener("DOMContentLoaded", carregar);
-
-/*************************************************
- * LOAD
- *************************************************/
-async function carregar() {
-  gantt.innerHTML = "";
-
-  const { data, error } = await sb
-    .from("cronograma_estrutura")
-    .select("*")
-    .order("ordem_prioridade", { ascending: true });
-
-  if (error) {
-    console.error(error);
-    alert("Erro ao carregar dados");
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    console.warn("Tabela sem registros");
-    return;
-  }
-
-  const itens = data;
-
-  // Base do cronograma = menor data criada
-  let baseDate = new Date();
-  itens.forEach(i => {
-    if (i.criado_em) {
-      const d = parseDate(i.criado_em);
-      if (d < baseDate) baseDate = d;
-    }
-  });
-
-  renderHeader(baseDate);
-  renderBody(baseDate, itens);
-  renderTodayLine(baseDate);
-}
-
-/*************************************************
- * HEADER
- *************************************************/
-function renderHeader(baseDate) {
-  const header = document.createElement("div");
-  header.className = "gantt-header";
-
-  const yearRow = document.createElement("div");
-  const monthRow = document.createElement("div");
-  const dayRow = document.createElement("div");
-
-  yearRow.className = "header-row";
-  monthRow.className = "header-row";
-  dayRow.className = "header-row";
-
-  let lastYear = null;
-  let lastMonth = null;
-
-  for (let i = 0; i < RANGE_DAYS; i++) {
-    const d = new Date(baseDate);
-    d.setDate(d.getDate() + i);
-
-    // DIA
-    const day = document.createElement("div");
-    day.className = "cell";
-    day.style.width = DAY_WIDTH + "px";
-    day.innerText = d.getDate();
-    dayRow.appendChild(day);
-
-    // MÊS
-    if (d.getMonth() !== lastMonth) {
-      lastMonth = d.getMonth();
-      const m = document.createElement("div");
-      m.className = "cell";
-      m.style.width = DAY_WIDTH + "px";
-      m.innerText = d.toLocaleString("pt-BR", { month: "short" });
-      monthRow.appendChild(m);
-    } else {
-      monthRow.lastChild.style.width =
-        parseInt(monthRow.lastChild.style.width) + DAY_WIDTH + "px";
+  <style>
+    /* ===== RESET BÁSICO ===== */
+    * {
+      box-sizing: border-box;
     }
 
-    // ANO
-    if (d.getFullYear() !== lastYear) {
-      lastYear = d.getFullYear();
-      const y = document.createElement("div");
-      y.className = "cell";
-      y.style.width = DAY_WIDTH + "px";
-      y.innerText = lastYear;
-      yearRow.appendChild(y);
-    } else {
-      yearRow.lastChild.style.width =
-        parseInt(yearRow.lastChild.style.width) + DAY_WIDTH + "px";
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f4f6f8;
+      color: #111827;
     }
-  }
 
-  header.appendChild(yearRow);
-  header.appendChild(monthRow);
-  header.appendChild(dayRow);
-  gantt.appendChild(header);
-}
+    /* ===== HEADER ===== */
+    .topbar {
+      background: linear-gradient(90deg, #0f172a, #020617);
+      padding: 16px 24px;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-/*************************************************
- * BODY + BARS
- *************************************************/
-function renderBody(baseDate, itens) {
-  const body = document.createElement("div");
-  body.className = "gantt-body";
+    /* ===== CONTROLES ===== */
+    .controls {
+      padding: 16px 24px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+    }
 
-  itens.forEach(item => {
-    if (!item.duracao_planejada_dias) return;
+    .controls button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 500;
+    }
 
-    const row = document.createElement("div");
-    row.className = "gantt-row";
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
 
-    const bar = document.createElement("div");
-    bar.className = "gantt-bar";
+    .btn-filter {
+      background: #e5e7eb;
+      color: #111827;
+    }
 
-    bar.innerText =
-      `PLAN - ${item.instalacao} - ${item.estrutura}`;
+    .btn-filter.active {
+      background: #2563eb;
+      color: white;
+    }
 
-    const inicio = item.criado_em
-      ? parseDate(item.criado_em)
-      : baseDate;
+    /* ===== GANTT CONTAINER ===== */
+    #gantt {
+      position: relative;
+      overflow-x: auto;
+      overflow-y: auto;
+      height: calc(100vh - 120px);
+      background: #ffffff;
+    }
 
-    bar.style.left =
-      diffDays(baseDate, inicio) * DAY_WIDTH + "px";
+    /* ===== HEADER DO GANTT ===== */
+    .gantt-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+    }
 
-    bar.style.width =
-      item.duracao_planejada_dias * DAY_WIDTH + "px";
+    .header-row {
+      display: flex;
+      height: 32px;
+      font-size: 12px;
+      font-weight: 500;
+    }
 
-    row.appendChild(bar);
-    body.appendChild(row);
-  });
+    .header-row .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid #e5e7eb;
+      color: #374151;
+      white-space: nowrap;
+    }
 
-  gantt.appendChild(body);
-}
+    /* ===== CORPO DO GANTT ===== */
+    .gantt-body {
+      position: relative;
+    }
 
-/*************************************************
- * TODAY LINE
- *************************************************/
-function renderTodayLine(baseDate) {
-  const pos = diffDays(baseDate, new Date()) * DAY_WIDTH;
+    .gantt-row {
+      position: relative;
+      height: 48px;
+      border-bottom: 1px solid #f1f5f9;
+    }
 
-  const line = document.createElement("div");
-  line.className = "today-line";
-  line.style.left = pos + "px";
+    /* ===== BARRA ===== */
+    .gantt-bar {
+      position: absolute;
+      top: 6px;
+      height: 36px;
+      background: #2563eb;
+      color: white;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: grab;
+      user-select: none;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
 
-  gantt.appendChild(line);
-}
+    .gantt-bar:active {
+      cursor: grabbing;
+    }
+
+    /* ===== LINHA DO DIA ATUAL ===== */
+    .today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #111827;
+      z-index: 15;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    #gantt::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    #gantt::-webkit-scrollbar-thumb {
+      background: #9ca3af;
+      border-radius: 6px;
+    }
+
+    #gantt::-webkit-scrollbar-track {
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOPO -->
+  <div class="topbar">
+    Cronograma de Produção — Gantt
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="controls">
+    <button class="btn-primary" id="btnSalvar">Salvar Cronograma</button>
+
+    <button class="btn-filter active" id="btnBDR">BDR</button>
+    <button class="btn-filter" id="btnBJ">BJ</button>
+  </div>
+
+  <!-- GANTT -->
+  <div id="gantt"></div>
+
+  <!-- SCRIPT PRINCIPAL -->
+  <script src="gantt.js"></script>
+
+</body>
+</html>

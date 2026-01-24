@@ -4,133 +4,177 @@
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
 
-  <!-- SUPABASE CDN (UMA ÚNICA VEZ) -->
+  <!-- SUPABASE (apenas uma vez) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: Inter, Arial, sans-serif;
-      background: #f5f7fb;
+    /* ===== RESET BÁSICO ===== */
+    * {
+      box-sizing: border-box;
     }
 
-    header {
-      background: linear-gradient(90deg, #0f172a, #1e293b);
-      color: #fff;
-      padding: 14px 20px;
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f4f6f8;
+      color: #111827;
+    }
+
+    /* ===== HEADER ===== */
+    .topbar {
+      background: linear-gradient(90deg, #0f172a, #020617);
+      padding: 16px 24px;
+      color: white;
       font-size: 18px;
       font-weight: 600;
     }
 
+    /* ===== CONTROLES ===== */
     .controls {
-      padding: 14px 20px;
+      padding: 16px 24px;
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      align-items: center;
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
     }
 
-    button {
+    .controls button {
+      padding: 8px 16px;
+      border-radius: 8px;
       border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
+      font-size: 14px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 500;
     }
 
-    .primary {
+    .btn-primary {
       background: #2563eb;
-      color: #fff;
+      color: white;
     }
 
-    .filter {
+    .btn-filter {
       background: #e5e7eb;
+      color: #111827;
     }
 
-    .filter.active {
+    .btn-filter.active {
       background: #2563eb;
-      color: #fff;
+      color: white;
     }
 
-    #gantt-wrapper {
+    /* ===== GANTT CONTAINER ===== */
+    #gantt {
       position: relative;
       overflow-x: auto;
-      background: #fff;
-      padding-bottom: 30px;
+      overflow-y: auto;
+      height: calc(100vh - 120px);
+      background: #ffffff;
     }
 
-    .timeline {
-      position: relative;
-      min-width: 3000px;
+    /* ===== HEADER DO GANTT ===== */
+    .gantt-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .header-row {
       display: flex;
-      position: sticky;
-      top: 0;
-      background: #fff;
-      z-index: 5;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .day {
-      width: 48px;
-      text-align: center;
-      font-size: 11px;
-      padding: 4px 0;
-      border-right: 1px solid #e5e7eb;
-    }
-
-    .month {
+      height: 32px;
       font-size: 12px;
-      font-weight: 600;
-      padding-left: 6px;
+      font-weight: 500;
     }
 
-    .row {
-      position: relative;
-      height: 42px;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .bar {
-      position: absolute;
-      top: 6px;
-      height: 28px;
-      background: #2563eb;
-      color: #fff;
-      border-radius: 8px;
-      font-size: 12px;
+    .header-row .cell {
       display: flex;
       align-items: center;
-      padding: 0 10px;
-      cursor: grab;
+      justify-content: center;
+      border-right: 1px solid #e5e7eb;
+      color: #374151;
       white-space: nowrap;
     }
 
+    /* ===== CORPO DO GANTT ===== */
+    .gantt-body {
+      position: relative;
+    }
+
+    .gantt-row {
+      position: relative;
+      height: 48px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* ===== BARRA ===== */
+    .gantt-bar {
+      position: absolute;
+      top: 6px;
+      height: 36px;
+      background: #2563eb;
+      color: white;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: grab;
+      user-select: none;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .gantt-bar:active {
+      cursor: grabbing;
+    }
+
+    /* ===== LINHA DO DIA ATUAL ===== */
     .today-line {
       position: absolute;
       top: 0;
       bottom: 0;
       width: 3px;
       background: #111827;
-      z-index: 10;
+      z-index: 15;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    #gantt::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    #gantt::-webkit-scrollbar-thumb {
+      background: #9ca3af;
+      border-radius: 6px;
+    }
+
+    #gantt::-webkit-scrollbar-track {
+      background: #e5e7eb;
     }
   </style>
 </head>
 
 <body>
 
-<header>Cronograma de Produção — Gantt</header>
+  <!-- TOPO -->
+  <div class="topbar">
+    Cronograma de Produção — Gantt
+  </div>
 
-<div class="controls">
-  <button id="btnSalvar" class="primary">Salvar Cronograma</button>
-  <button id="btnBDR" class="filter active">BDR</button>
-  <button id="btnBJ" class="filter">BJ</button>
-</div>
+  <!-- CONTROLES -->
+  <div class="controls">
+    <button class="btn-primary" id="btnSalvar">Salvar Cronograma</button>
 
-<div id="gantt-wrapper">
+    <button class="btn-filter active" id="btnBDR">BDR</button>
+    <button class="btn-filter" id="btnBJ">BJ</button>
+  </div>
+
+  <!-- GANTT -->
   <div id="gantt"></div>
-</div>
 
-<script src="gantt.js"></script>
+  <!-- SCRIPT PRINCIPAL -->
+  <script src="gantt.js"></script>
+
 </body>
 </html>

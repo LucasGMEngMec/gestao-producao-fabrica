@@ -2,9 +2,10 @@ console.log("JS carregado corretamente");
 
 /* =========================================================
    CONFIGURAÇÃO SUPABASE
+   (use sua URL e sua chave anon pública)
 ========================================================= */
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"; // anon public key
+const SUPABASE_KEY = "SUA_CHAVE_ANON_PUBLICA_AQUI";
 
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,
@@ -12,29 +13,22 @@ const supabaseClient = supabase.createClient(
 );
 
 /* =========================================================
+   ELEMENTOS HTML (OBRIGATÓRIOS NO gantt.html)
+========================================================= */
+const gantt = document.getElementById("gantt");
+const fornecedoresContainer = document.getElementById("fornecedores");
+
+if (!gantt || !fornecedoresContainer) {
+  console.error("Elementos #gantt ou #fornecedores não encontrados no HTML");
+}
+
+/* =========================================================
    ESTADO GLOBAL
 ========================================================= */
 let fornecedorAtual = null;
-let gantt = null;
-let fornecedoresContainer = null;
 
 /* =========================================================
-   INIT (DOM READY)
-========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
-  gantt = document.getElementById("gantt");
-  fornecedoresContainer = document.getElementById("fornecedores");
-
-  if (!gantt || !fornecedoresContainer) {
-    console.error("Elementos #gantt ou #fornecedores não encontrados no HTML");
-    return;
-  }
-
-  carregarFornecedores();
-});
-
-/* =========================================================
-   CARREGAR FORNECEDORES (DINÂMICO)
+   CARREGAR FORNECEDORES (DINÂMICO DO BANCO)
 ========================================================= */
 async function carregarFornecedores() {
   fornecedoresContainer.innerHTML = "";
@@ -49,20 +43,18 @@ async function carregarFornecedores() {
     return;
   }
 
-  const fornecedores = [
-    ...new Set(data.map(f => f.fornecedor).filter(Boolean))
-  ];
-
-  if (fornecedores.length === 0) {
+  if (!data || data.length === 0) {
     fornecedoresContainer.innerHTML =
       "<span>Nenhum fornecedor encontrado</span>";
     return;
   }
 
+  const fornecedores = [...new Set(data.map(f => f.fornecedor).filter(Boolean))];
+
   fornecedores.forEach((nome, index) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
-    btn.textContent = nome;
+    btn.innerText = nome;
 
     btn.addEventListener("click", () => selecionarFornecedor(nome));
 
@@ -81,23 +73,29 @@ function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
 
   document.querySelectorAll(".btn-filter").forEach(btn => {
-    btn.classList.toggle("active", btn.textContent === nome);
+    btn.classList.toggle("active", btn.innerText === nome);
   });
 
   carregarCronograma();
 }
 
 /* =========================================================
-   CARREGAR CRONOGRAMA FILTRADO
+   CARREGAR CRONOGRAMA DO FORNECEDOR
 ========================================================= */
 async function carregarCronograma() {
   gantt.innerHTML = "";
 
   const { data, error } = await supabaseClient
     .from("cronograma_estrutura")
-    .select("*")
-    .eq("fornecedor", fornecedorAtual)
-    .order("data_inicio_plan", { ascending: true });
+    .select(`
+      fornecedor,
+      obra,
+      instalacao,
+      estrutura,
+      data_inicio_plan,
+      data_fim_plan
+    `)
+    .eq("fornecedor", fornecedorAtual);
 
   if (error) {
     console.error(error);
@@ -106,8 +104,7 @@ async function carregarCronograma() {
   }
 
   if (!data || data.length === 0) {
-    gantt.innerHTML =
-      "<p>Nenhuma atividade para este fornecedor</p>";
+    gantt.innerHTML = "<p>Nenhuma atividade para este fornecedor</p>";
     return;
   }
 
@@ -115,24 +112,33 @@ async function carregarCronograma() {
 }
 
 /* =========================================================
-   RENDERIZAR BARRAS (VERSÃO SEGURA)
+   RENDERIZAÇÃO SIMPLES DAS BARRAS
+   (estrutura correta para evoluir para Gantt real)
 ========================================================= */
 function renderizarBarras(atividades) {
   atividades.forEach(item => {
-    if (!item.data_inicio_plan) {
-      console.warn(
-        "Atividade sem data_inicio_plan ignorada:",
-        item
-      );
-      return;
-    }
-
     const bar = document.createElement("div");
     bar.className = "bar plan";
 
-    bar.textContent =
-      `${item.situacao} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+    bar.innerText =
+      `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+
+    // Placeholder visual (layout correto)
+    bar.style.marginBottom = "12px";
+    bar.style.padding = "8px 12px";
+    bar.style.background = "#2563eb";
+    bar.style.color = "#fff";
+    bar.style.borderRadius = "6px";
+    bar.style.fontSize = "13px";
+    bar.style.width = "fit-content";
 
     gantt.appendChild(bar);
   });
 }
+
+/* =========================================================
+   INIT
+========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+  carregarFornecedores();
+});

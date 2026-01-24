@@ -15,10 +15,10 @@ const DATA_BASE = new Date("2026-01-01");
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
-const fornecedoresContainer = document.getElementById("fornecedores");
+const fornecedorContainer = document.getElementById("fornecedor");
 
-if (!gantt || !fornecedoresContainer) {
-  console.error("HTML inválido: faltam #gantt ou #fornecedores");
+if (!gantt || !fornecedorContainer) {
+  console.error("HTML inválido: faltam #gantt ou #fornecedor");
 }
 
 /* ================= UTIL ================= */
@@ -27,9 +27,9 @@ function diasEntre(d1, d2) {
   return Math.round(ms / (1000 * 60 * 60 * 24));
 }
 
-/* ================= FORNECEDORES ================= */
-async function carregarFornecedores() {
-  fornecedoresContainer.innerHTML = "";
+/* ================= FORNECEDOR ================= */
+async function carregarFornecedor() {
+  fornecedorContainer.innerHTML = "";
 
   const { data, error } = await supabase
     .from("cronograma_estrutura")
@@ -37,20 +37,20 @@ async function carregarFornecedores() {
 
   if (error) {
     console.error(error);
-    alert("Erro ao carregar fornecedores");
+    alert("Erro ao carregar fornecedor");
     return;
   }
 
-  const fornecedores = [...new Set(
+  const fornecedor = [...new Set(
     data.map(d => d.fornecedor).filter(Boolean)
   )];
 
-  fornecedores.forEach((nome, i) => {
+  fornecedor.forEach((nome, i) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
     btn.textContent = nome;
     btn.onclick = () => selecionarFornecedor(nome);
-    fornecedoresContainer.appendChild(btn);
+    fornecedorContainer.appendChild(btn);
 
     if (i === 0) selecionarFornecedor(nome);
   });
@@ -143,4 +143,4 @@ function tornarArrastavel(bar, id) {
 }
 
 /* ================= INIT ================= */
-carregarFornecedores();
+carregarFornecedor();

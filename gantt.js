@@ -115,7 +115,7 @@ function renderizar() {
     bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
     bar.style.top = `${i * LINHA_ALTURA + 8}px`;
     bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-    bar.textContent = `${item.obra} - ${item.estrutura}`;
+    bar.textContent = `${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
     bar.onmousedown = e => drag(bar, item, e);
     bar.ondblclick = () => abrirModal(item);
@@ -153,7 +153,7 @@ function drag(bar, item, e) {
 /* ================= MODAL ================= */
 function abrirModal(item) {
   modalContent.innerHTML = `
-    <h3>${item.obra} - ${item.estrutura}</h3>
+    <h3>${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
     <p><b>Fornecedor:</b> ${item.fornecedor}</p>
     <p><b>Início:</b> ${item.data_inicio_plan}</p>
     <p><b>Término:</b> ${item.data_fim_plan}</p>

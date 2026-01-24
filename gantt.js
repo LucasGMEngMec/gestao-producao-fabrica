@@ -5,7 +5,7 @@ console.log("JS carregado corretamente");
    (use sua URL e sua chave anon pública)
 ========================================================= */
 const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
-const SUPABASE_KEY = "SUA_CHAVE_ANON_PUBLICA_AQUI";
+const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,

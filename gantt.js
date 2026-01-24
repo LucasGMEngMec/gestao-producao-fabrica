@@ -3,8 +3,8 @@ console.log("JS carregado corretamente");
 /* =========================================================
    CONFIGURAÇÃO SUPABASE
 ========================================================= */
-const SUPABASE_URL = "https://dkmejmlovtcadlichhu.supabase.co";
-const SUPABASE_KEY = "SUA_CHAVE_PUBLICA_AQUI"; // anon public key
+const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"; // anon public key
 
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,
@@ -15,12 +15,23 @@ const supabaseClient = supabase.createClient(
    ESTADO GLOBAL
 ========================================================= */
 let fornecedorAtual = null;
+let gantt = null;
+let fornecedoresContainer = null;
 
 /* =========================================================
-   ELEMENTOS
+   INIT (DOM READY)
 ========================================================= */
-const gantt = document.getElementById("gantt");
-const fornecedoresContainer = document.getElementById("fornecedores");
+document.addEventListener("DOMContentLoaded", () => {
+  gantt = document.getElementById("gantt");
+  fornecedoresContainer = document.getElementById("fornecedores");
+
+  if (!gantt || !fornecedoresContainer) {
+    console.error("Elementos #gantt ou #fornecedores não encontrados no HTML");
+    return;
+  }
+
+  carregarFornecedores();
+});
 
 /* =========================================================
    CARREGAR FORNECEDORES (DINÂMICO)
@@ -29,7 +40,7 @@ async function carregarFornecedores() {
   fornecedoresContainer.innerHTML = "";
 
   const { data, error } = await supabaseClient
-    .from("cronograma")
+    .from("cronograma_estrutura")
     .select("fornecedor");
 
   if (error) {
@@ -38,17 +49,20 @@ async function carregarFornecedores() {
     return;
   }
 
-  const fornecedores = [...new Set(data.map(f => f.fornecedor))];
+  const fornecedores = [
+    ...new Set(data.map(f => f.fornecedor).filter(Boolean))
+  ];
 
   if (fornecedores.length === 0) {
-    fornecedoresContainer.innerHTML = "<span>Nenhum fornecedor encontrado</span>";
+    fornecedoresContainer.innerHTML =
+      "<span>Nenhum fornecedor encontrado</span>";
     return;
   }
 
   fornecedores.forEach((nome, index) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
-    btn.innerText = nome;
+    btn.textContent = nome;
 
     btn.addEventListener("click", () => selecionarFornecedor(nome));
 
@@ -67,7 +81,7 @@ function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
 
   document.querySelectorAll(".btn-filter").forEach(btn => {
-    btn.classList.toggle("active", btn.innerText === nome);
+    btn.classList.toggle("active", btn.textContent === nome);
   });
 
   carregarCronograma();
@@ -80,9 +94,10 @@ async function carregarCronograma() {
   gantt.innerHTML = "";
 
   const { data, error } = await supabaseClient
-    .from("cronograma")
+    .from("cronograma_estrutura")
     .select("*")
-    .eq("fornecedor", fornecedorAtual);
+    .eq("fornecedor", fornecedorAtual)
+    .order("data_inicio_plan", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -91,7 +106,8 @@ async function carregarCronograma() {
   }
 
   if (!data || data.length === 0) {
-    gantt.innerHTML = "<p>Nenhuma atividade para este fornecedor</p>";
+    gantt.innerHTML =
+      "<p>Nenhuma atividade para este fornecedor</p>";
     return;
   }
 
@@ -99,23 +115,24 @@ async function carregarCronograma() {
 }
 
 /* =========================================================
-   RENDERIZAR BARRAS (SIMPLIFICADO)
+   RENDERIZAR BARRAS (VERSÃO SEGURA)
 ========================================================= */
 function renderizarBarras(atividades) {
   atividades.forEach(item => {
+    if (!item.data_inicio_plan) {
+      console.warn(
+        "Atividade sem data_inicio_plan ignorada:",
+        item
+      );
+      return;
+    }
+
     const bar = document.createElement("div");
     bar.className = "bar plan";
 
-    bar.innerText =
+    bar.textContent =
       `${item.situacao} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
     gantt.appendChild(bar);
   });
 }
-
-/* =========================================================
-   INIT
-========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
-  carregarFornecedores();
-});

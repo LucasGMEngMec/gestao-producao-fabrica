@@ -4,135 +4,143 @@ console.log("JS carregado corretamente");
 const SUPABASE_URL = "https://dkmejmlovtcadlichhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
-const supabaseClient = supabase.createClient(
+const supabase = window.createSupabaseClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
 
-/* ================= ELEMENTOS ================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const gantt = document.getElementById("gantt");
-  const fornecedoresContainer = document.getElementById("fornecedores");
+/* ================= CONFIG ================= */
+const PX_POR_DIA = 30;
+const DATA_BASE = new Date("2026-01-01");
 
-  if (!gantt || !fornecedoresContainer) {
-    console.error("HTML incompleto: faltam #gantt ou #fornecedores");
+/* ================= DOM ================= */
+const gantt = document.getElementById("gantt");
+const fornecedoresContainer = document.getElementById("fornecedores");
+
+if (!gantt || !fornecedoresContainer) {
+  console.error("HTML inválido: faltam #gantt ou #fornecedores");
+}
+
+/* ================= UTIL ================= */
+function diasEntre(d1, d2) {
+  const ms = new Date(d2) - new Date(d1);
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+/* ================= FORNECEDORES ================= */
+async function carregarFornecedores() {
+  fornecedoresContainer.innerHTML = "";
+
+  const { data, error } = await supabase
+    .from("cronograma_estrutura")
+    .select("fornecedor");
+
+  if (error) {
+    console.error(error);
+    alert("Erro ao carregar fornecedores");
     return;
   }
 
-  let fornecedorAtual = null;
+  const fornecedores = [...new Set(
+    data.map(d => d.fornecedor).filter(Boolean)
+  )];
 
-  /* ============ UTIL ============ */
-  function diasEntre(d1, d2) {
-    const ms = new Date(d2) - new Date(d1);
-    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  fornecedores.forEach((nome, i) => {
+    const btn = document.createElement("button");
+    btn.className = "btn-filter";
+    btn.textContent = nome;
+    btn.onclick = () => selecionarFornecedor(nome);
+    fornecedoresContainer.appendChild(btn);
+
+    if (i === 0) selecionarFornecedor(nome);
+  });
+}
+
+/* ================= SELEÇÃO ================= */
+let fornecedorAtual = null;
+
+function selecionarFornecedor(nome) {
+  fornecedorAtual = nome;
+
+  document.querySelectorAll(".btn-filter").forEach(btn =>
+    btn.classList.toggle("active", btn.textContent === nome)
+  );
+
+  carregarCronograma();
+}
+
+/* ================= CRONOGRAMA ================= */
+async function carregarCronograma() {
+  gantt.innerHTML = "";
+
+  const { data, error } = await supabase
+    .from("cronograma_estrutura")
+    .select("*")
+    .eq("fornecedor", fornecedorAtual);
+
+  if (error || !data || data.length === 0) {
+    gantt.innerHTML = "<p style='padding:12px'>Nenhuma atividade</p>";
+    return;
   }
 
-  const dataBase = new Date("2026-01-01"); // marco inicial do gantt
-  const PX_POR_DIA = 30;
+  renderizarGantt(data);
+}
 
-  /* ============ FORNECEDORES ============ */
-  async function carregarFornecedores() {
-    fornecedoresContainer.innerHTML = "";
+/* ================= GANTT ================= */
+function renderizarGantt(registros) {
+  registros.forEach((item, index) => {
+    if (!item.data_inicio_plan || !item.data_fim_plan) return;
 
-    const { data, error } = await supabaseClient
-      .from("cronograma_estrutura")
-      .select("fornecedor");
+    const inicio = new Date(item.data_inicio_plan);
+    const fim = new Date(item.data_fim_plan);
 
-    if (error) {
-      console.error(error);
-      alert("Erro ao buscar fornecedores");
-      return;
-    }
+    const left = diasEntre(DATA_BASE, inicio) * PX_POR_DIA;
+    const width = Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA;
 
-    const fornecedores = [...new Set(data.map(d => d.fornecedor).filter(Boolean))];
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.style.left = `${left}px`;
+    bar.style.top = `${index * 36}px`;
+    bar.style.width = `${width}px`;
 
-    fornecedores.forEach((nome, i) => {
-      const btn = document.createElement("button");
-      btn.className = "btn-filter";
-      btn.textContent = nome;
-      btn.onclick = () => selecionarFornecedor(nome);
-      fornecedoresContainer.appendChild(btn);
-      if (i === 0) selecionarFornecedor(nome);
-    });
-  }
+    bar.textContent =
+      `${item.situacao ?? "PLAN"} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-  /* ============ SELEÇÃO ============ */
-  function selecionarFornecedor(nome) {
-    fornecedorAtual = nome;
-    document.querySelectorAll(".btn-filter").forEach(b =>
-      b.classList.toggle("active", b.textContent === nome)
-    );
-    carregarCronograma();
-  }
+    tornarArrastavel(bar, item.id);
+    gantt.appendChild(bar);
+  });
+}
 
-  /* ============ CRONOGRAMA ============ */
-  async function carregarCronograma() {
-    gantt.innerHTML = "";
+/* ================= DRAG ================= */
+function tornarArrastavel(bar, id) {
+  let startX;
 
-    const { data, error } = await supabaseClient
-      .from("cronograma_estrutura")
-      .select("*")
-      .eq("fornecedor", fornecedorAtual);
+  bar.onmousedown = e => {
+    startX = e.clientX;
 
-    if (error || !data.length) {
-      gantt.innerHTML = "<p>Nenhum registro</p>";
-      return;
-    }
-
-    renderizarGantt(data);
-  }
-
-  /* ============ GANTT REAL ============ */
-  function renderizarGantt(registros) {
-    registros.forEach((item, index) => {
-      if (!item.data_inicio_plan || !item.data_fim_plan) return;
-
-      const inicio = new Date(item.data_inicio_plan);
-      const fim = new Date(item.data_fim_plan);
-
-      const left = diasEntre(dataBase, inicio) * PX_POR_DIA;
-      const width = diasEntre(inicio, fim) * PX_POR_DIA;
-
-      const bar = document.createElement("div");
-      bar.className = "bar";
-      bar.style.left = `${left}px`;
-      bar.style.top = `${index * 36}px`;
-      bar.style.width = `${width}px`;
-      bar.textContent = `${item.obra} – ${item.estrutura}`;
-
-      tornarArrastavel(bar, item.id);
-
-      gantt.appendChild(bar);
-    });
-  }
-
-  /* ============ DRAG & UPDATE ============ */
-  function tornarArrastavel(bar, id) {
-    let startX;
-
-    bar.onmousedown = e => {
-      startX = e.clientX;
-      document.onmousemove = ev => {
-        const dx = ev.clientX - startX;
-        bar.style.left = bar.offsetLeft + dx + "px";
-        startX = ev.clientX;
-      };
-
-      document.onmouseup = async () => {
-        document.onmousemove = null;
-        document.onmouseup = null;
-
-        const dias = Math.round(bar.offsetLeft / PX_POR_DIA);
-        const novaData = new Date(dataBase);
-        novaData.setDate(novaData.getDate() + dias);
-
-        await supabaseClient
-          .from("cronograma_estrutura")
-          .update({ data_inicio_plan: novaData.toISOString().slice(0, 10) })
-          .eq("id", id);
-      };
+    document.onmousemove = ev => {
+      const dx = ev.clientX - startX;
+      bar.style.left = bar.offsetLeft + dx + "px";
+      startX = ev.clientX;
     };
-  }
 
-  carregarFornecedores();
-});
+    document.onmouseup = async () => {
+      document.onmousemove = null;
+      document.onmouseup = null;
+
+      const dias = Math.round(bar.offsetLeft / PX_POR_DIA);
+      const novaData = new Date(DATA_BASE);
+      novaData.setDate(novaData.getDate() + dias);
+
+      await supabase
+        .from("cronograma_estrutura")
+        .update({
+          data_inicio_plan: novaData.toISOString().slice(0, 10)
+        })
+        .eq("id", id);
+    };
+  };
+}
+
+/* ================= INIT ================= */
+carregarFornecedores();

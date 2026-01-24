@@ -190,3 +190,20 @@ addLinha();
 
 </body>
 </html>
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+  const supabase = createClient(
+    "SUA_URL",
+    "SUA_CHAVE"
+  );
+
+  async function salvarCronograma() {
+    // coleta dados
+    // valida
+    // insert no Supabase
+  }
+
+  window.salvarCronograma = salvarCronograma;
+</script>

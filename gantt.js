@@ -10,78 +10,92 @@ const supabase = window.createSupabaseClient(
 );
 
 /* ================= CONFIG ================= */
-const PX_POR_DIA = 30;
+let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
+const LINHA_ALTURA = 36;
+const TOTAL_DIAS = 180;
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
+const ganttHeader = document.getElementById("gantt-header");
 const fornecedorContainer = document.getElementById("fornecedor");
-
-if (!gantt || !fornecedorContainer) {
-  console.error("HTML inválido: faltam #gantt ou #fornecedor");
-}
 
 /* ================= UTIL ================= */
 function diasEntre(d1, d2) {
-  const ms = new Date(d2) - new Date(d1);
-  return Math.round(ms / (1000 * 60 * 60 * 24));
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+}
+
+/* ================= GRADE + CABEÇALHO ================= */
+function desenharGrade() {
+  gantt.innerHTML = "";
+  ganttHeader.innerHTML = "";
+
+  gantt.style.width = `${TOTAL_DIAS * PX_POR_DIA}px`;
+  ganttHeader.style.width = gantt.style.width;
+
+  for (let d = 0; d <= TOTAL_DIAS; d++) {
+    const x = d * PX_POR_DIA;
+
+    const line = document.createElement("div");
+    line.className = "grid-line";
+    line.style.left = `${x}px`;
+    gantt.appendChild(line);
+
+    const data = new Date(DATA_BASE);
+    data.setDate(data.getDate() + d);
+
+    if (data.getDate() === 1) {
+      const label = document.createElement("div");
+      label.className = "month-label";
+      label.style.left = `${x}px`;
+      label.style.width = `${PX_POR_DIA * 30}px`;
+      label.textContent = data.toLocaleDateString("pt-BR", {
+        month: "short",
+        year: "numeric"
+      });
+      ganttHeader.appendChild(label);
+    }
+  }
 }
 
 /* ================= FORNECEDOR ================= */
 async function carregarFornecedor() {
   fornecedorContainer.innerHTML = "";
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("cronograma_estrutura")
     .select("fornecedor");
 
-  if (error) {
-    console.error(error);
-    alert("Erro ao carregar fornecedor");
-    return;
-  }
+  const lista = [...new Set(data.map(d => d.fornecedor).filter(Boolean))];
 
-  const fornecedor = [...new Set(
-    data.map(d => d.fornecedor).filter(Boolean)
-  )];
-
-  fornecedor.forEach((nome, i) => {
+  lista.forEach((nome, i) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
     btn.textContent = nome;
     btn.onclick = () => selecionarFornecedor(nome);
     fornecedorContainer.appendChild(btn);
-
     if (i === 0) selecionarFornecedor(nome);
   });
 }
 
-/* ================= SELEÇÃO ================= */
 let fornecedorAtual = null;
 
 function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
-
-  document.querySelectorAll(".btn-filter").forEach(btn =>
-    btn.classList.toggle("active", btn.textContent === nome)
+  document.querySelectorAll(".btn-filter").forEach(b =>
+    b.classList.toggle("active", b.textContent === nome)
   );
-
   carregarCronograma();
 }
 
 /* ================= CRONOGRAMA ================= */
 async function carregarCronograma() {
-  gantt.innerHTML = "";
+  desenharGrade();
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("cronograma_estrutura")
     .select("*")
     .eq("fornecedor", fornecedorAtual);
-
-  if (error || !data || data.length === 0) {
-    gantt.innerHTML = "<p style='padding:12px'>Nenhuma atividade</p>";
-    return;
-  }
 
   renderizarGantt(data);
 }
@@ -98,49 +112,28 @@ function renderizarGantt(registros) {
     const width = Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA;
 
     const bar = document.createElement("div");
-    bar.className = "bar";
+    bar.className = "bar plan";
     bar.style.left = `${left}px`;
-    bar.style.top = `${index * 36}px`;
+    bar.style.top = `${index * LINHA_ALTURA + 8}px`;
     bar.style.width = `${width}px`;
 
     bar.textContent =
-      `${item.situacao ?? "PLAN"} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+      `${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-    tornarArrastavel(bar, item.id);
     gantt.appendChild(bar);
   });
 }
 
-/* ================= DRAG ================= */
-function tornarArrastavel(bar, id) {
-  let startX;
-
-  bar.onmousedown = e => {
-    startX = e.clientX;
-
-    document.onmousemove = ev => {
-      const dx = ev.clientX - startX;
-      bar.style.left = bar.offsetLeft + dx + "px";
-      startX = ev.clientX;
-    };
-
-    document.onmouseup = async () => {
-      document.onmousemove = null;
-      document.onmouseup = null;
-
-      const dias = Math.round(bar.offsetLeft / PX_POR_DIA);
-      const novaData = new Date(DATA_BASE);
-      novaData.setDate(novaData.getDate() + dias);
-
-      await supabase
-        .from("cronograma_estrutura")
-        .update({
-          data_inicio_plan: novaData.toISOString().slice(0, 10)
-        })
-        .eq("id", id);
-    };
+/* ================= ZOOM ================= */
+document.querySelectorAll("[data-zoom]").forEach(btn => {
+  btn.onclick = () => {
+    PX_POR_DIA = Number(btn.dataset.zoom);
+    document.querySelectorAll("[data-zoom]").forEach(b =>
+      b.classList.toggle("active", b === btn)
+    );
+    carregarCronograma();
   };
-}
+});
 
 /* ================= INIT ================= */
 carregarFornecedor();

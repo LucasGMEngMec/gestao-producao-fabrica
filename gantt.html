@@ -1,27 +1,33 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Supabase CDN -->
+  <!-- SUPABASE -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
       background: #f4f6f8;
+      color: #111827;
     }
 
+    /* ===== HEADER ===== */
     .topbar {
       background: linear-gradient(90deg, #0f172a, #020617);
-      color: white;
       padding: 16px 24px;
+      color: #fff;
       font-size: 18px;
       font-weight: 600;
     }
 
+    /* ===== CONTROLES ===== */
     .controls {
       padding: 16px 24px;
       display: flex;
@@ -31,39 +37,98 @@
       border-bottom: 1px solid #e5e7eb;
     }
 
-    button {
+    .controls button {
       padding: 8px 16px;
       border-radius: 8px;
       border: none;
       cursor: pointer;
+      font-size: 14px;
       font-weight: 500;
     }
 
-    .btn-primary { background: #2563eb; color: white; }
-    .btn-filter { background: #e5e7eb; }
-    .btn-filter.active { background: #2563eb; color: white; }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .btn-filter {
+      background: #e5e7eb;
+      color: #111827;
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-filter.active {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    /* ===== FORNECEDORES ===== */
+    #fornecedores {
+      padding: 12px 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* ===== GANTT ===== */
+    #gantt-wrapper {
+      padding: 16px;
+      overflow-x: auto;
+    }
 
     #gantt {
       position: relative;
-      overflow-x: auto;
-      padding: 24px;
+      min-width: 2400px;
+      height: 500px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+
+    .bar {
+      position: absolute;
+      height: 28px;
+      background: #2563eb;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 12px;
+      padding: 4px 8px;
+      cursor: grab;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar:active {
+      cursor: grabbing;
+      opacity: 0.85;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="topbar">Cronograma de Produção — Gantt</div>
-
-  <div class="controls">
-    <button id="btnSalvar" class="btn-primary">Salvar Cronograma</button>
-    <button id="btnBDR" class="btn-filter active">BDR</button>
-    <button id="btnBJ" class="btn-filter">BJ</button>
+  <!-- HEADER -->
+  <div class="topbar">
+    Cronograma de Produção — Gantt
   </div>
 
-  <div id="gantt"></div>
+  <!-- CONTROLES -->
+  <div class="controls">
+    <button class="btn-primary">Salvar Cronograma</button>
+  </div>
 
-  <!-- JS SEMPRE NO FINAL -->
+  <!-- FILTRO DE FORNECEDORES (DINÂMICO) -->
+  <div id="fornecedores"></div>
+
+  <!-- GANTT -->
+  <div id="gantt-wrapper">
+    <div id="gantt"></div>
+  </div>
+
+  <!-- SCRIPT -->
   <script src="gantt.js"></script>
 
 </body>

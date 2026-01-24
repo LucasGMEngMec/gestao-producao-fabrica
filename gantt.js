@@ -174,7 +174,7 @@
   <div id="gantt"></div>
 
   <!-- SCRIPT PRINCIPAL -->
-  <script src="gantt.js"></script>
+  <script src="./gantt.js"></script>
 
 </body>
 </html>

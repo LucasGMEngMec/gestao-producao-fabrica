@@ -236,11 +236,11 @@ function dragPlan(bar, item, e) {
 function abrirModal(item) {
   const tarefas = registros
     .filter(r => r.id !== item.id)
-    .map(r => `<option value="${r.id}">${r.obra} - ${r.estrutura}</option>`)
+    .map(r => `<option value="${r.id}">${r.obra} - ${r.instalacao} - ${r.estrutura}</option>`)
     .join("");
 
   modalContent.innerHTML = `
-    <h3>${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
+    <h3>${item.obra} - ${item.instalacao} - ${item.instalacao} - ${item.estrutura}</h3>
 
     <p><b>Fornecedor:</b> ${item.fornecedor}</p>
 

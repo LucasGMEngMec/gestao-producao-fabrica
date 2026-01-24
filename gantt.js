@@ -1,10 +1,9 @@
 console.log("JS carregado corretamente");
 
 /* =========================================================
-   CONFIGURAÇÃO SUPABASE
-   (use sua URL e sua chave anon pública)
+   SUPABASE
 ========================================================= */
-const SUPABASE_URL = "https://dklmejmlovtcadlicnhu.supabase.co";
+const SUPABASE_URL = "https://dkmejmlovtcadlichhu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At";
 
 const supabaseClient = supabase.createClient(
@@ -13,7 +12,7 @@ const supabaseClient = supabase.createClient(
 );
 
 /* =========================================================
-   ELEMENTOS HTML (OBRIGATÓRIOS NO gantt.html)
+   ELEMENTOS
 ========================================================= */
 const gantt = document.getElementById("gantt");
 const fornecedoresContainer = document.getElementById("fornecedores");
@@ -23,12 +22,12 @@ if (!gantt || !fornecedoresContainer) {
 }
 
 /* =========================================================
-   ESTADO GLOBAL
+   ESTADO
 ========================================================= */
 let fornecedorAtual = null;
 
 /* =========================================================
-   CARREGAR FORNECEDORES (DINÂMICO DO BANCO)
+   CARREGAR FORNECEDORES (DINÂMICO)
 ========================================================= */
 async function carregarFornecedores() {
   fornecedoresContainer.innerHTML = "";
@@ -43,20 +42,21 @@ async function carregarFornecedores() {
     return;
   }
 
-  if (!data || data.length === 0) {
-    fornecedoresContainer.innerHTML =
-      "<span>Nenhum fornecedor encontrado</span>";
+  const fornecedores = [...new Set(
+    data.map(r => r.fornecedor).filter(Boolean)
+  )];
+
+  if (fornecedores.length === 0) {
+    fornecedoresContainer.innerHTML = "<span>Nenhum fornecedor cadastrado</span>";
     return;
   }
-
-  const fornecedores = [...new Set(data.map(f => f.fornecedor).filter(Boolean))];
 
   fornecedores.forEach((nome, index) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
-    btn.innerText = nome;
+    btn.textContent = nome;
 
-    btn.addEventListener("click", () => selecionarFornecedor(nome));
+    btn.onclick = () => selecionarFornecedor(nome);
 
     fornecedoresContainer.appendChild(btn);
 
@@ -73,29 +73,23 @@ function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
 
   document.querySelectorAll(".btn-filter").forEach(btn => {
-    btn.classList.toggle("active", btn.innerText === nome);
+    btn.classList.toggle("active", btn.textContent === nome);
   });
 
   carregarCronograma();
 }
 
 /* =========================================================
-   CARREGAR CRONOGRAMA DO FORNECEDOR
+   CARREGAR CRONOGRAMA
 ========================================================= */
 async function carregarCronograma() {
   gantt.innerHTML = "";
 
   const { data, error } = await supabaseClient
     .from("cronograma_estrutura")
-    .select(`
-      fornecedor,
-      obra,
-      instalacao,
-      estrutura,
-      data_inicio_plan,
-      data_fim_plan
-    `)
-    .eq("fornecedor", fornecedorAtual);
+    .select("*")
+    .eq("fornecedor", fornecedorAtual)
+    .order("data_inicio_plan", { ascending: true });
 
   if (error) {
     console.error(error);
@@ -112,25 +106,17 @@ async function carregarCronograma() {
 }
 
 /* =========================================================
-   RENDERIZAÇÃO SIMPLES DAS BARRAS
-   (estrutura correta para evoluir para Gantt real)
+   RENDERIZAR BARRAS (SIMPLIFICADO)
 ========================================================= */
 function renderizarBarras(atividades) {
   atividades.forEach(item => {
+    if (!item.data_inicio_plan || !item.data_fim_plan) return;
+
     const bar = document.createElement("div");
     bar.className = "bar plan";
 
-    bar.innerText =
-      `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
-
-    // Placeholder visual (layout correto)
-    bar.style.marginBottom = "12px";
-    bar.style.padding = "8px 12px";
-    bar.style.background = "#2563eb";
-    bar.style.color = "#fff";
-    bar.style.borderRadius = "6px";
-    bar.style.fontSize = "13px";
-    bar.style.width = "fit-content";
+    bar.textContent =
+      `${item.obra} | ${item.instalacao} | ${item.estrutura}`;
 
     gantt.appendChild(bar);
   });
@@ -139,6 +125,4 @@ function renderizarBarras(atividades) {
 /* =========================================================
    INIT
 ========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
-  carregarFornecedores();
-});
+document.addEventListener("DOMContentLoaded", carregarFornecedores);

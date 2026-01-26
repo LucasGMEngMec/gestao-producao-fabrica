@@ -49,25 +49,21 @@ function desenharHeader() {
     const data = new Date(DATA_BASE);
     data.setDate(data.getDate() + d);
 
-    // Linha vertical
     const line = document.createElement("div");
     line.className = "grid-line";
     line.style.left = `${x}px`;
     gantt.appendChild(line);
 
-    // Número do dia
     const day = document.createElement("div");
     day.className = "day-label";
     day.style.left = `${x}px`;
     day.textContent = data.getDate();
 
-    const diaSemana = data.getDay();
-    if (diaSemana === 6) day.style.color = "#ca8a04"; // sábado
-    if (diaSemana === 0) day.style.color = "#dc2626"; // domingo
+    if (data.getDay() === 6) day.style.color = "#ca8a04";
+    if (data.getDay() === 0) day.style.color = "#dc2626";
 
     header.appendChild(day);
 
-    // Mês
     if (data.getDate() === 1) {
       const month = document.createElement("div");
       month.className = "month-label";
@@ -84,11 +80,9 @@ function desenharHeader() {
   desenharLinhaHoje();
 }
 
-/* ================= LINHA HOJE ================= */
 function desenharLinhaHoje() {
   const hoje = new Date();
   const offset = diasEntre(DATA_BASE, hoje);
-
   if (offset < 0 || offset > TOTAL_DIAS) return;
 
   const line = document.createElement("div");
@@ -99,7 +93,6 @@ function desenharLinhaHoje() {
   line.style.width = "2px";
   line.style.background = "#ef4444";
   line.style.zIndex = "5";
-
   gantt.appendChild(line);
 }
 
@@ -161,7 +154,7 @@ function renderizar() {
     );
 
     // PLAN
-    linha = criarBarra(item, "PLAN", item.data_inicio_plan, item.data_fim_plan, linha, "plan");
+    linha = criarBarra(item, "PLAN", item.data_inicio_plan, item.data_fim_plan, linha);
 
     // REAL
     if (prod.length > 0) {
@@ -171,32 +164,23 @@ function renderizar() {
         "REAL",
         new Date(Math.min(...datas)),
         new Date(Math.max(...datas)),
-        linha,
-        "real"
+        linha
       );
     }
 
     // FORECAST
-    if (item.data_fim_forecast) {
-      linha = criarBarra(
-        item,
-        "FORECAST",
-        item.data_inicio_plan,
-        item.data_fim_forecast,
-        linha,
-        "forecast"
-      );
-    }
+    const fimForecast = item.data_fim_forecast || item.data_fim_plan;
+    linha = criarBarra(item, "FORECAST", item.data_inicio_plan, fimForecast, linha);
 
     linha++;
   });
 }
 
-function criarBarra(item, tipo, inicio, fim, linha, classe) {
+function criarBarra(item, tipo, inicio, fim, linha) {
   if (!inicio || !fim) return linha;
 
   const bar = document.createElement("div");
-  bar.className = `bar ${classe}`;
+  bar.className = `bar ${tipo.toLowerCase()}`;
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${linha * ALTURA_LINHA + 6}px`;
   bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
@@ -204,11 +188,54 @@ function criarBarra(item, tipo, inicio, fim, linha, classe) {
 
   if (tipo === "PLAN") {
     bar.onmousedown = e => drag(bar, item, e);
-    bar.ondblclick = () => abrirModal(item);
   }
 
+  bar.ondblclick = () => abrirModal(item, tipo);
   gantt.appendChild(bar);
+
   return linha + 1;
+}
+
+/* ================= MODAL ================= */
+function abrirModal(item, tipo) {
+  const sucessoras = registros.filter(r => r.tarefa_precedente_id === item.id);
+
+  modalContent.innerHTML = `
+    <h3>${tipo} - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
+
+    <p><b>Início Planejado:</b> ${item.data_inicio_plan ?? "-"}</p>
+    <p><b>Fim Planejado:</b> ${item.data_fim_plan ?? "-"}</p>
+    <p><b>Peso Total:</b> ${item.peso_total_kg ?? "-"} kg</p>
+
+    <label>Predecessora</label>
+    <select id="pred">
+      <option value="">Nenhuma</option>
+      ${registros.filter(r => r.id !== item.id)
+        .map(r => `<option value="${r.id}" ${r.id === item.tarefa_precedente_id ? "selected" : ""}>
+          ${r.obra} - ${r.instalacao} - ${r.estrutura}
+        </option>`).join("")}
+    </select>
+
+    <p><b>Sucessoras:</b><br>
+      ${sucessoras.length === 0 ? "Nenhuma" :
+        sucessoras.map(s => `${s.obra} - ${s.instalacao} - ${s.estrutura}`).join("<br>")}
+    </p>
+
+    <button id="salvarDep">Salvar</button>
+    <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
+  `;
+
+  document.getElementById("salvarDep").onclick = async () => {
+    await supabase
+      .from("cronograma_estrutura")
+      .update({ tarefa_precedente_id: document.getElementById("pred").value || null })
+      .eq("id", item.id);
+
+    modal.style.display = "none";
+    carregarCronograma();
+  };
+
+  modal.style.display = "flex";
 }
 
 /* ================= DRAG ================= */
@@ -232,37 +259,6 @@ function drag(bar, item, e) {
   };
 }
 
-/* ================= MODAL ================= */
-function abrirModal(item) {
-  modalContent.innerHTML = `
-    <h3>PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
-
-    <label>Predecessora</label>
-    <select id="pred">
-      <option value="">Nenhuma</option>
-      ${registros.filter(r => r.id !== item.id)
-        .map(r => `<option value="${r.id}" ${r.id === item.tarefa_precedente_id ? "selected" : ""}>
-          ${r.obra} - ${r.instalacao} - ${r.estrutura}
-        </option>`).join("")}
-    </select>
-
-    <br><br>
-    <button id="salvarDep">Salvar</button>
-    <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
-  `;
-
-  document.getElementById("salvarDep").onclick = async () => {
-    await supabase
-      .from("cronograma_estrutura")
-      .update({ tarefa_precedente_id: document.getElementById("pred").value || null })
-      .eq("id", item.id);
-
-    modal.style.display = "none";
-  };
-
-  modal.style.display = "flex";
-}
-
 /* ================= SAVE ================= */
 document.getElementById("btnSalvar").onclick = async () => {
   for (const r of registros) {
@@ -270,7 +266,8 @@ document.getElementById("btnSalvar").onclick = async () => {
       .from("cronograma_estrutura")
       .update({
         data_inicio_plan: r.data_inicio_plan,
-        data_fim_plan: r.data_fim_plan
+        data_fim_plan: r.data_fim_plan,
+        tarefa_precedente_id: r.tarefa_precedente_id
       })
       .eq("id", r.id);
   }

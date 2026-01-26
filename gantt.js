@@ -1,4 +1,4 @@
-console.log("JS carregado corretamente");
+console.log("Gantt carregado corretamente");
 
 /* ================= SUPABASE ================= */
 const supabase = window.createSupabaseClient(
@@ -9,8 +9,7 @@ const supabase = window.createSupabaseClient(
 /* ================= CONFIG ================= */
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
-const TOTAL_DIAS = 220;
-const LINHA_ALTURA = 38;
+const ALTURA_LINHA = 34;
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
@@ -26,12 +25,13 @@ let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
 function diasEntre(d1, d2) {
-  return Math.max(1, Math.round((new Date(d2) - new Date(d1)) / 86400000));
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 
-function dataPorOffset(offset) {
+function dateFromLeft(leftPx) {
+  const dias = Math.round(leftPx / PX_POR_DIA);
   const d = new Date(DATA_BASE);
-  d.setDate(d.getDate() + offset);
+  d.setDate(d.getDate() + dias);
   return d.toISOString().slice(0, 10);
 }
 
@@ -40,6 +40,7 @@ function desenharHeader() {
   gantt.innerHTML = "";
   header.innerHTML = "";
 
+  const TOTAL_DIAS = 220;
   const largura = TOTAL_DIAS * PX_POR_DIA;
   gantt.style.width = `${largura}px`;
   header.style.width = `${largura}px`;
@@ -53,12 +54,6 @@ function desenharHeader() {
     line.className = "grid-line";
     line.style.left = `${x}px`;
     gantt.appendChild(line);
-
-    const day = document.createElement("div");
-    day.className = "day-label";
-    day.style.left = `${x}px`;
-    day.textContent = data.getDate();
-    header.appendChild(day);
 
     if (data.getDate() === 1) {
       const month = document.createElement("div");
@@ -82,7 +77,7 @@ async function carregarFornecedor() {
     .from("cronograma_estrutura")
     .select("fornecedor");
 
-  [...new Set(data.map(d => d.fornecedor).filter(Boolean))].forEach((nome, i) => {
+  [...new Set(data.map(d => d.fornecedor))].forEach((nome, i) => {
     const btn = document.createElement("button");
     btn.className = "btn-filter";
     btn.textContent = nome;
@@ -104,114 +99,98 @@ function selecionarFornecedor(nome) {
 async function carregarCronograma() {
   desenharHeader();
 
-  const resPlan = await supabase
+  const res1 = await supabase
     .from("cronograma_estrutura")
     .select("*")
     .eq("fornecedor", fornecedorAtual);
 
-  const resApont = await supabase
+  const res2 = await supabase
     .from("apontamentos")
     .select("*")
     .eq("fornecedor", fornecedorAtual);
 
-  registros = resPlan.data || [];
-  apontamentos = resApont.data || [];
+  registros = res1.data || [];
+  apontamentos = res2.data || [];
 
   renderizar();
 }
 
 /* ================= RENDER ================= */
 function renderizar() {
-  registros.forEach((item, i) => {
-    renderPlan(item, i);
-    renderReal(item, i);
-    renderForecast(item, i);
+  let linha = 0;
+
+  registros.forEach(item => {
+    const prod = apontamentos.filter(a =>
+      a.obra === item.obra &&
+      a.instalacao === item.instalacao &&
+      a.estrutura === item.estrutura
+    );
+
+    // PLAN
+    linha = criarBarra(
+      item,
+      "PLAN",
+      item.data_inicio_plan,
+      item.data_fim_plan,
+      linha,
+      "plan"
+    );
+
+    if (prod.length > 0) {
+      // REAL
+      const datas = prod.map(p => p.data);
+      linha = criarBarra(
+        item,
+        "REAL",
+        Math.min(...datas),
+        Math.max(...datas),
+        linha,
+        "real"
+      );
+
+      // FORECAST
+      if (item.data_fim_forecast) {
+        linha = criarBarra(
+          item,
+          "FORECAST",
+          item.data_inicio_real || item.data_inicio_plan,
+          item.data_fim_forecast,
+          linha,
+          "forecast"
+        );
+      }
+    }
+
+    linha++; // espaço entre estruturas
   });
 }
 
-/* ================= PLAN ================= */
-function renderPlan(item, index) {
-  if (!item.data_inicio_plan || !item.data_fim_plan) return;
+function criarBarra(item, tipo, inicio, fim, linha, classe) {
+  if (!inicio || !fim) return linha;
 
-  const inicio = new Date(item.data_inicio_plan);
-  const fim = new Date(item.data_fim_plan);
-  const dur = diasEntre(inicio, fim);
+  const left = diasEntre(DATA_BASE, inicio) * PX_POR_DIA;
+  const width = Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA;
 
   const bar = document.createElement("div");
-  bar.className = "bar plan";
-  bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${dur * PX_POR_DIA}px`;
-  bar.textContent = `PLAN | ${item.obra} - ${item.instalacao} - ${item.estrutura};
+  bar.className = `bar ${classe}`;
+  bar.style.left = `${left}px`;
+  bar.style.top = `${linha * ALTURA_LINHA + 6}px`;
+  bar.style.width = `${width}px`;
 
-  bar.onmousedown = e => dragPlan(bar, item, e);
-  bar.ondblclick = () => abrirModal(item, "PLAN");
+  bar.textContent =
+    `${tipo} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-  gantt.appendChild(bar);
-}
-
-/* ================= REAL ================= */
-function renderReal(item, index) {
-  const ap = apontamentos.filter(a =>
-    a.obra === item.obra &&
-    a.instalacao === item.instalacao &&
-    a.estrutura === item.estrutura
-  );
-
-  if (ap.length === 0) return;
-
-  const datas = ap.map(a => new Date(a.data));
-  const inicio = new Date(Math.min(...datas));
-  const fim = new Date(Math.max(...datas));
-
-  const bar = document.createElement("div");
-  bar.className = "bar real";
-  bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-  bar.textContent = `REAL | ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
-
-  bar.ondblclick = () => abrirModal(item, "REAL", { inicio, fim });
+  if (tipo === "PLAN") {
+    bar.onmousedown = e => drag(bar, item, e);
+    bar.ondblclick = () => abrirModal(item);
+  }
 
   gantt.appendChild(bar);
-}
-
-/* ================= FORECAST ================= */
-function renderForecast(item, index) {
-  const ap = apontamentos.filter(a =>
-    a.obra === item.obra &&
-    a.instalacao === item.instalacao &&
-    a.estrutura === item.estrutura
-  );
-
-  if (ap.length === 0) return;
-
-  const datas = ap.map(a => new Date(a.data));
-  const inicioReal = new Date(Math.min(...datas));
-
-  const durPlan = diasEntre(
-    new Date(item.data_inicio_plan),
-    new Date(item.data_fim_plan)
-  );
-
-  const fimForecast = new Date(inicioReal);
-  fimForecast.setDate(fimForecast.getDate() + durPlan);
-
-  const bar = document.createElement("div");
-  bar.className = "bar forecast";
-  bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${durPlan * PX_POR_DIA}px`;
-  bar.textContent = `FORECAST | ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
-
-  bar.ondblclick = () =>
-    abrirModal(item, "FORECAST", { inicio: inicioReal, fim: fimForecast });
-
-  gantt.appendChild(bar);
+  return linha + 1;
 }
 
 /* ================= DRAG ================= */
-function dragPlan(bar, item, e) {
+function drag(bar, item, e) {
   let startX = e.clientX;
 
   document.onmousemove = ev => {
@@ -224,32 +203,57 @@ function dragPlan(bar, item, e) {
     document.onmousemove = null;
     document.onmouseup = null;
 
-    const offset = Math.round(bar.offsetLeft / PX_POR_DIA);
-    const novaInicio = dataPorOffset(offset);
+    item.data_inicio_plan = dateFromLeft(bar.offsetLeft);
     const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
-
-    item.data_inicio_plan = novaInicio;
-    const f = new Date(novaInicio);
-    f.setDate(f.getDate() + dur);
-    item.data_fim_plan = f.toISOString().slice(0, 10);
+    const fim = new Date(item.data_inicio_plan);
+    fim.setDate(fim.getDate() + dur);
+    item.data_fim_plan = fim.toISOString().slice(0, 10);
   };
 }
 
 /* ================= MODAL ================= */
-function abrirModal(item, tipo, datas = {}) {
+function abrirModal(item) {
   modalContent.innerHTML = `
-    <h3>${tipo} | ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
-    <p><b>Fornecedor:</b> ${item.fornecedor}</p>
-    <p><b>Peso:</b> ${item.peso_total || 0} kg</p>
-    <p><b>Início:</b> ${datas.inicio ? datas.inicio.toISOString().slice(0,10) : item.data_inicio_plan}</p>
-    <p><b>Fim:</b> ${datas.fim ? datas.fim.toISOString().slice(0,10) : item.data_fim_plan}</p>
-    <br>
+    <h3>PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
+
+    <label>Predecessora</label>
+    <select id="pred">
+      <option value="">Nenhuma</option>
+      ${registros
+        .filter(r => r.id !== item.id)
+        .map(r => `<option value="${r.id}" ${r.id === item.tarefa_precedente_id ? "selected" : ""}>
+          ${r.obra} - ${r.instalacao} - ${r.estrutura}
+        </option>`).join("")}
+    </select>
+
+    <label>Sucessora</label>
+    <select id="succ">
+      <option value="">Nenhuma</option>
+      ${registros
+        .filter(r => r.tarefa_precedente_id === item.id)
+        .map(r => `<option selected>${r.obra} - ${r.instalacao} - ${r.estrutura}</option>`).join("")}
+    </select>
+
+    <br><br>
+    <button id="salvarDep">Salvar</button>
     <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
   `;
+
+  document.getElementById("salvarDep").onclick = async () => {
+    const pred = document.getElementById("pred").value || null;
+
+    await supabase
+      .from("cronograma_estrutura")
+      .update({ tarefa_precedente_id: pred })
+      .eq("id", item.id);
+
+    modal.style.display = "none";
+  };
+
   modal.style.display = "flex";
 }
 
-/* ================= SALVAR ================= */
+/* ================= SAVE ================= */
 document.getElementById("btnSalvar").onclick = async () => {
   for (const r of registros) {
     await supabase

@@ -142,7 +142,7 @@ function renderPlan(item, index) {
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${dur * PX_POR_DIA}px`;
-  bar.textContent = `PLAN | ${item.instalacao} - ${item.estrutura} | Peso: ${item.peso_total || 0} kg`;
+  bar.textContent = `PLAN | ${item.obra} - ${item.instalacao} - ${item.estrutura};
 
   bar.onmousedown = e => dragPlan(bar, item, e);
   bar.ondblclick = () => abrirModal(item, "PLAN");
@@ -169,7 +169,7 @@ function renderReal(item, index) {
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-  bar.textContent = `REAL | ${item.instalacao} - ${item.estrutura}`;
+  bar.textContent = `REAL | ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
   bar.ondblclick = () => abrirModal(item, "REAL", { inicio, fim });
 
@@ -202,7 +202,7 @@ function renderForecast(item, index) {
   bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${durPlan * PX_POR_DIA}px`;
-  bar.textContent = `FORECAST | ${item.instalacao} - ${item.estrutura}`;
+  bar.textContent = `FORECAST | ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
   bar.ondblclick = () =>
     abrirModal(item, "FORECAST", { inicio: inicioReal, fim: fimForecast });
@@ -238,7 +238,7 @@ function dragPlan(bar, item, e) {
 /* ================= MODAL ================= */
 function abrirModal(item, tipo, datas = {}) {
   modalContent.innerHTML = `
-    <h3>${tipo} | ${item.instalacao} - ${item.estrutura}</h3>
+    <h3>${tipo} | ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
     <p><b>Fornecedor:</b> ${item.fornecedor}</p>
     <p><b>Peso:</b> ${item.peso_total || 0} kg</p>
     <p><b>Início:</b> ${datas.inicio ? datas.inicio.toISOString().slice(0,10) : item.data_inicio_plan}</p>

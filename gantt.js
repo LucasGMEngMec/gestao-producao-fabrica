@@ -9,7 +9,7 @@ const supabase = window.createSupabaseClient(
 /* ================= CONFIG ================= */
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
-const TOTAL_DIAS = 220;
+const TOTAL_DIAS = 240;
 const ALTURA_LINHA = 34;
 
 /* ================= DOM ================= */
@@ -22,6 +22,7 @@ const modalContent = document.getElementById("modalContent");
 /* ================= STATE ================= */
 let registros = [];
 let apontamentos = [];
+let dependencias = [];
 let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
@@ -29,13 +30,18 @@ function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 
+function isDiaUtil(data) {
+  const d = data.getDay();
+  return d !== 0 && d !== 6;
+}
+
 function dateFromLeft(px) {
   const d = new Date(DATA_BASE);
   d.setDate(d.getDate() + Math.round(px / PX_POR_DIA));
-  return d.toISOString().slice(0, 10);
+  return d;
 }
 
-/* ================= HEADER ================= */
+/* ================= HEADER + PESO ================= */
 function desenharHeader() {
   gantt.innerHTML = "";
   header.innerHTML = "";
@@ -44,36 +50,70 @@ function desenharHeader() {
   gantt.style.width = `${largura}px`;
   header.style.width = `${largura}px`;
 
-  for (let d = 0; d <= TOTAL_DIAS; d++) {
-    const x = d * PX_POR_DIA;
+  const pesoDia = {};
+  const pesoMes = {};
+
+  registros.forEach(r => {
+    if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total_kg) return;
+
+    const inicio = new Date(r.data_inicio_plan);
+    const fim = new Date(r.data_fim_plan);
+
+    const diasUteis = [];
+    for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+      if (isDiaUtil(d)) diasUteis.push(new Date(d));
+    }
+
+    const pesoDiario = r.peso_total_kg / diasUteis.length;
+
+    diasUteis.forEach(d => {
+      const keyDia = d.toISOString().slice(0, 10);
+      const keyMes = `${d.getFullYear()}-${d.getMonth() + 1}`;
+
+      pesoDia[keyDia] = (pesoDia[keyDia] || 0) + pesoDiario;
+      pesoMes[keyMes] = (pesoMes[keyMes] || 0) + pesoDiario;
+    });
+  });
+
+  for (let i = 0; i <= TOTAL_DIAS; i++) {
+    const x = i * PX_POR_DIA;
     const data = new Date(DATA_BASE);
-    data.setDate(data.getDate() + d);
+    data.setDate(data.getDate() + i);
 
     const line = document.createElement("div");
     line.className = "grid-line";
     line.style.left = `${x}px`;
     gantt.appendChild(line);
 
-    const day = document.createElement("div");
-    day.className = "day-label";
-    day.style.left = `${x}px`;
-    day.textContent = data.getDate();
+    const diaKey = data.toISOString().slice(0, 10);
+    const dia = document.createElement("div");
+    dia.className = "day-label";
+    dia.style.left = `${x}px`;
+    dia.innerHTML = `
+      ${data.getDate()}
+      <div style="font-size:9px;color:#2563eb">
+        ${(pesoDia[diaKey] || 0).toFixed(1)}
+      </div>
+    `;
 
-    if (data.getDay() === 6) day.style.color = "#ca8a04";
-    if (data.getDay() === 0) day.style.color = "#dc2626";
+    if (data.getDay() === 6) dia.style.color = "#ca8a04";
+    if (data.getDay() === 0) dia.style.color = "#dc2626";
 
-    header.appendChild(day);
+    header.appendChild(dia);
 
     if (data.getDate() === 1) {
-      const month = document.createElement("div");
-      month.className = "month-label";
-      month.style.left = `${x}px`;
-      month.style.width = `${PX_POR_DIA * 30}px`;
-      month.textContent = data.toLocaleDateString("pt-BR", {
-        month: "short",
-        year: "numeric"
-      });
-      header.appendChild(month);
+      const mesKey = `${data.getFullYear()}-${data.getMonth() + 1}`;
+      const mes = document.createElement("div");
+      mes.className = "month-label";
+      mes.style.left = `${x}px`;
+      mes.style.width = `${PX_POR_DIA * 30}px`;
+      mes.innerHTML = `
+        ${data.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
+        <div style="font-size:10px">
+          ${(pesoMes[mesKey] || 0).toFixed(1)} t
+        </div>
+      `;
+      header.appendChild(mes);
     }
   }
 
@@ -96,48 +136,23 @@ function desenharLinhaHoje() {
   gantt.appendChild(line);
 }
 
-/* ================= FORNECEDOR ================= */
-async function carregarFornecedor() {
-  fornecedorContainer.innerHTML = "";
-
-  const { data } = await supabase
-    .from("cronograma_estrutura")
-    .select("fornecedor");
-
-  [...new Set(data.map(d => d.fornecedor))].forEach((nome, i) => {
-    const btn = document.createElement("button");
-    btn.className = "btn-filter";
-    btn.textContent = nome;
-    btn.onclick = () => selecionarFornecedor(nome);
-    fornecedorContainer.appendChild(btn);
-    if (i === 0) selecionarFornecedor(nome);
-  });
-}
-
-function selecionarFornecedor(nome) {
-  fornecedorAtual = nome;
-  document.querySelectorAll(".btn-filter").forEach(b =>
-    b.classList.toggle("active", b.textContent === nome)
-  );
-  carregarCronograma();
-}
-
 /* ================= LOAD ================= */
 async function carregarCronograma() {
   desenharHeader();
 
-  const r1 = await supabase
+  registros = (await supabase
     .from("cronograma_estrutura")
     .select("*")
-    .eq("fornecedor", fornecedorAtual);
+    .eq("fornecedor", fornecedorAtual)).data || [];
 
-  const r2 = await supabase
+  apontamentos = (await supabase
     .from("apontamentos")
     .select("*")
-    .eq("fornecedor", fornecedorAtual);
+    .eq("fornecedor", fornecedorAtual)).data || [];
 
-  registros = r1.data || [];
-  apontamentos = r2.data || [];
+  dependencias = (await supabase
+    .from("cronograma_dependencias")
+    .select("*")).data || [];
 
   renderizar();
 }
@@ -147,30 +162,30 @@ function renderizar() {
   let linha = 0;
 
   registros.forEach(item => {
+    linha = criarBarra(item, "PLAN", item.data_inicio_plan, item.data_fim_plan, linha);
+
     const prod = apontamentos.filter(a =>
       a.obra === item.obra &&
       a.instalacao === item.instalacao &&
       a.estrutura === item.estrutura
     );
 
-    // PLAN
-    linha = criarBarra(item, "PLAN", item.data_inicio_plan, item.data_fim_plan, linha);
-
-    // REAL
     if (prod.length > 0) {
       const datas = prod.map(p => new Date(p.data));
-      linha = criarBarra(
-        item,
-        "REAL",
+      linha = criarBarra(item, "REAL",
         new Date(Math.min(...datas)),
         new Date(Math.max(...datas)),
         linha
       );
     }
 
-    // FORECAST
-    const fimForecast = item.data_fim_forecast || item.data_fim_plan;
-    linha = criarBarra(item, "FORECAST", item.data_inicio_plan, fimForecast, linha);
+    if (item.data_fim_forecast) {
+      linha = criarBarra(item, "FORECAST",
+        item.data_inicio_real || item.data_inicio_plan,
+        item.data_fim_forecast,
+        linha
+      );
+    }
 
     linha++;
   });
@@ -198,43 +213,93 @@ function criarBarra(item, tipo, inicio, fim, linha) {
 
 /* ================= MODAL ================= */
 function abrirModal(item, tipo) {
-  const sucessoras = registros.filter(r => r.tarefa_precedente_id === item.id);
+  if (tipo === "PLAN") abrirModalPlan(item);
+  if (tipo === "REAL") abrirModalReal(item);
+  if (tipo === "FORECAST") abrirModalForecast(item);
+}
+
+function abrirModalPlan(item) {
+  const preds = dependencias.filter(d => d.tarefa_dependente_id === item.id);
+  const sucs = dependencias.filter(d => d.tarefa_id === item.id);
 
   modalContent.innerHTML = `
-    <h3>${tipo} - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
+    <h3>PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
+    <p>Início: ${item.data_inicio_plan}</p>
+    <p>Fim: ${item.data_fim_plan}</p>
+    <p>Peso: ${item.peso_total_kg ?? "-"} kg</p>
 
-    <p><b>Início Planejado:</b> ${item.data_inicio_plan ?? "-"}</p>
-    <p><b>Fim Planejado:</b> ${item.data_fim_plan ?? "-"}</p>
-    <p><b>Peso Total:</b> ${item.peso_total_kg ?? "-"} kg</p>
-
-    <label>Predecessora</label>
-    <select id="pred">
-      <option value="">Nenhuma</option>
+    <label>Predecessoras</label>
+    <select id="pred" multiple>
       ${registros.filter(r => r.id !== item.id)
-        .map(r => `<option value="${r.id}" ${r.id === item.tarefa_precedente_id ? "selected" : ""}>
-          ${r.obra} - ${r.instalacao} - ${r.estrutura}
+        .map(r => `<option value="${r.id}" ${preds.some(p => p.tarefa_id === r.id) ? "selected" : ""}>
+          ${r.obra} - ${r.estrutura}
         </option>`).join("")}
     </select>
 
-    <p><b>Sucessoras:</b><br>
-      ${sucessoras.length === 0 ? "Nenhuma" :
-        sucessoras.map(s => `${s.obra} - ${s.instalacao} - ${s.estrutura}`).join("<br>")}
-    </p>
+    <label>Sucessoras</label>
+    <select id="suc" multiple>
+      ${registros.filter(r => r.id !== item.id)
+        .map(r => `<option value="${r.id}" ${sucs.some(s => s.tarefa_dependente_id === r.id) ? "selected" : ""}>
+          ${r.obra} - ${r.estrutura}
+        </option>`).join("")}
+    </select>
 
     <button id="salvarDep">Salvar</button>
-    <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
+    <button onclick="modal.style.display='none'">Fechar</button>
   `;
 
   document.getElementById("salvarDep").onclick = async () => {
-    await supabase
-      .from("cronograma_estrutura")
-      .update({ tarefa_precedente_id: document.getElementById("pred").value || null })
-      .eq("id", item.id);
+    await supabase.from("cronograma_dependencias").delete().or(
+      `tarefa_id.eq.${item.id},tarefa_dependente_id.eq.${item.id}`
+    );
+
+    const predsSel = [...document.getElementById("pred").selectedOptions];
+    for (const p of predsSel) {
+      await supabase.from("cronograma_dependencias")
+        .insert({ tarefa_id: p.value, tarefa_dependente_id: item.id });
+    }
+
+    const sucsSel = [...document.getElementById("suc").selectedOptions];
+    for (const s of sucsSel) {
+      await supabase.from("cronograma_dependencias")
+        .insert({ tarefa_id: item.id, tarefa_dependente_id: s.value });
+    }
 
     modal.style.display = "none";
     carregarCronograma();
   };
 
+  modal.style.display = "flex";
+}
+
+function abrirModalReal(item) {
+  const prod = apontamentos.filter(a =>
+    a.obra === item.obra &&
+    a.instalacao === item.instalacao &&
+    a.estrutura === item.estrutura
+  );
+
+  const datas = prod.map(p => new Date(p.data));
+  const pesoAtual = prod.length; // placeholder
+
+  modalContent.innerHTML = `
+    <h3>REAL - ${item.obra} - ${item.estrutura}</h3>
+    <p>Início real: ${datas.length ? datas[0].toISOString().slice(0,10) : "-"}</p>
+    <p>Fim real: ${prod.length ? datas[datas.length - 1].toISOString().slice(0,10) : "-"}</p>
+    <p>Peso produzido: ${pesoAtual} kg</p>
+    <p>Percentual: ${(pesoAtual / item.peso_total_kg * 100).toFixed(1)}%</p>
+    <button onclick="modal.style.display='none'">Fechar</button>
+  `;
+  modal.style.display = "flex";
+}
+
+function abrirModalForecast(item) {
+  modalContent.innerHTML = `
+    <h3>FORECAST - ${item.obra} - ${item.estrutura}</h3>
+    <p>Início real: ${item.data_inicio_real ?? "-"}</p>
+    <p>Fim forecast: ${item.data_fim_forecast ?? "-"}</p>
+    <button onclick="modal.style.display='none'">Fechar</button>
+  `;
   modal.style.display = "flex";
 }
 
@@ -251,11 +316,11 @@ function drag(bar, item, e) {
     document.onmousemove = null;
     document.onmouseup = null;
 
-    item.data_inicio_plan = dateFromLeft(bar.offsetLeft);
+    item.data_inicio_plan = dateFromLeft(bar.offsetLeft).toISOString().slice(0,10);
     const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
     const fim = new Date(item.data_inicio_plan);
     fim.setDate(fim.getDate() + dur);
-    item.data_fim_plan = fim.toISOString().slice(0, 10);
+    item.data_fim_plan = fim.toISOString().slice(0,10);
   };
 }
 
@@ -266,12 +331,11 @@ document.getElementById("btnSalvar").onclick = async () => {
       .from("cronograma_estrutura")
       .update({
         data_inicio_plan: r.data_inicio_plan,
-        data_fim_plan: r.data_fim_plan,
-        tarefa_precedente_id: r.tarefa_precedente_id
+        data_fim_plan: r.data_fim_plan
       })
       .eq("id", r.id);
   }
-  alert("Cronograma salvo com sucesso");
+  alert("Cronograma salvo");
 };
 
 /* ================= ZOOM ================= */

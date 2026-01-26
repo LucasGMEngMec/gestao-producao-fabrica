@@ -26,7 +26,7 @@ let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
 function diasEntre(d1, d2) {
-  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+  return Math.max(1, Math.round((new Date(d2) - new Date(d1)) / 86400000));
 }
 
 function dataPorOffset(offset) {
@@ -35,7 +35,7 @@ function dataPorOffset(offset) {
   return d.toISOString().slice(0, 10);
 }
 
-/* ================= HEADER / GRADE ================= */
+/* ================= HEADER ================= */
 function desenharHeader() {
   gantt.innerHTML = "";
   header.innerHTML = "";
@@ -72,16 +72,6 @@ function desenharHeader() {
       header.appendChild(month);
     }
   }
-
-  /* LINHA HOJE */
-  const hoje = new Date();
-  const offsetHoje = diasEntre(DATA_BASE, hoje);
-  if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
-    const hojeLine = document.createElement("div");
-    hojeLine.className = "today-line";
-    hojeLine.style.left = `${offsetHoje * PX_POR_DIA}px`;
-    gantt.appendChild(hojeLine);
-  }
 }
 
 /* ================= FORNECEDOR ================= */
@@ -110,7 +100,7 @@ function selecionarFornecedor(nome) {
   carregarCronograma();
 }
 
-/* ================= LOAD DATA ================= */
+/* ================= LOAD ================= */
 async function carregarCronograma() {
   desenharHeader();
 
@@ -145,16 +135,17 @@ function renderPlan(item, index) {
 
   const inicio = new Date(item.data_inicio_plan);
   const fim = new Date(item.data_fim_plan);
+  const dur = diasEntre(inicio, fim);
 
   const bar = document.createElement("div");
   bar.className = "bar plan";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-  bar.textContent = `PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+  bar.style.width = `${dur * PX_POR_DIA}px`;
+  bar.textContent = `PLAN | ${item.instalacao} - ${item.estrutura} | Peso: ${item.peso_total || 0} kg`;
 
   bar.onmousedown = e => dragPlan(bar, item, e);
-  bar.ondblclick = () => abrirModal(item);
+  bar.ondblclick = () => abrirModal(item, "PLAN");
 
   gantt.appendChild(bar);
 }
@@ -177,36 +168,49 @@ function renderReal(item, index) {
   bar.className = "bar real";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
-  bar.textContent = `REAL - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+  bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
+  bar.textContent = `REAL | ${item.instalacao} - ${item.estrutura}`;
+
+  bar.ondblclick = () => abrirModal(item, "REAL", { inicio, fim });
 
   gantt.appendChild(bar);
 }
 
 /* ================= FORECAST ================= */
 function renderForecast(item, index) {
-  if (!item.data_inicio_plan || !item.data_fim_plan) return;
+  const ap = apontamentos.filter(a =>
+    a.obra === item.obra &&
+    a.instalacao === item.instalacao &&
+    a.estrutura === item.estrutura
+  );
 
-  const fimPlan = new Date(item.data_fim_plan);
-  const forecastFim = item.data_fim_forecast
-    ? new Date(item.data_fim_forecast)
-    : fimPlan;
+  if (ap.length === 0) return;
 
-  const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
-  const inicioForecast = new Date(fimPlan);
-  inicioForecast.setDate(inicioForecast.getDate() + 1);
+  const datas = ap.map(a => new Date(a.data));
+  const inicioReal = new Date(Math.min(...datas));
+
+  const durPlan = diasEntre(
+    new Date(item.data_inicio_plan),
+    new Date(item.data_fim_plan)
+  );
+
+  const fimForecast = new Date(inicioReal);
+  fimForecast.setDate(fimForecast.getDate() + durPlan);
 
   const bar = document.createElement("div");
   bar.className = "bar forecast";
-  bar.style.left = `${diasEntre(DATA_BASE, inicioForecast) * PX_POR_DIA}px`;
+  bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${dur * PX_POR_DIA}px`;
-  bar.textContent = `FORECAST - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+  bar.style.width = `${durPlan * PX_POR_DIA}px`;
+  bar.textContent = `FORECAST | ${item.instalacao} - ${item.estrutura}`;
+
+  bar.ondblclick = () =>
+    abrirModal(item, "FORECAST", { inicio: inicioReal, fim: fimForecast });
 
   gantt.appendChild(bar);
 }
 
-/* ================= DRAG PLAN ================= */
+/* ================= DRAG ================= */
 function dragPlan(bar, item, e) {
   let startX = e.clientX;
 
@@ -225,7 +229,6 @@ function dragPlan(bar, item, e) {
     const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
 
     item.data_inicio_plan = novaInicio;
-
     const f = new Date(novaInicio);
     f.setDate(f.getDate() + dur);
     item.data_fim_plan = f.toISOString().slice(0, 10);
@@ -233,49 +236,17 @@ function dragPlan(bar, item, e) {
 }
 
 /* ================= MODAL ================= */
-function abrirModal(item) {
-  const tarefas = registros
-    .filter(r => r.id !== item.id)
-    .map(r => `<option value="${r.id}">${r.obra} - ${r.instalacao} - ${r.estrutura}</option>`)
-    .join("");
-
+function abrirModal(item, tipo, datas = {}) {
   modalContent.innerHTML = `
-    <h3>${item.obra} - ${item.instalacao} - ${item.instalacao} - ${item.estrutura}</h3>
-
+    <h3>${tipo} | ${item.instalacao} - ${item.estrutura}</h3>
     <p><b>Fornecedor:</b> ${item.fornecedor}</p>
-
-    <p><b>Início (PLAN):</b> ${item.data_inicio_plan}</p>
-    <p><b>Fim (PLAN):</b> ${item.data_fim_plan}</p>
-
-    <label>Predecessora</label>
-    <select id="predecessora">
-      <option value="">Nenhuma</option>
-      ${tarefas}
-    </select>
-
-    <label>Sucessora</label>
-    <select id="sucessora">
-      <option value="">Nenhuma</option>
-      ${tarefas}
-    </select>
-
-    <br><br>
-    <button id="salvarModal">Salvar</button>
+    <p><b>Peso:</b> ${item.peso_total || 0} kg</p>
+    <p><b>Início:</b> ${datas.inicio ? datas.inicio.toISOString().slice(0,10) : item.data_inicio_plan}</p>
+    <p><b>Fim:</b> ${datas.fim ? datas.fim.toISOString().slice(0,10) : item.data_fim_plan}</p>
+    <br>
     <button onclick="document.getElementById('modal').style.display='none'">Fechar</button>
   `;
-
   modal.style.display = "flex";
-
-  document.getElementById("salvarModal").onclick = async () => {
-    const pred = document.getElementById("predecessora").value || null;
-
-    await supabase
-      .from("cronograma_estrutura")
-      .update({ tarefa_precedente_id: pred })
-      .eq("id", item.id);
-
-    modal.style.display = "none";
-  };
 }
 
 /* ================= SALVAR ================= */

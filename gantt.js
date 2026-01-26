@@ -30,15 +30,49 @@ function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 
-function isDiaUtil(data) {
-  const d = data.getDay();
-  return d !== 0 && d !== 6;
+function isDiaUtil(d) {
+  const wd = d.getDay();
+  return wd !== 0 && wd !== 6;
 }
 
 function dateFromLeft(px) {
   const d = new Date(DATA_BASE);
   d.setDate(d.getDate() + Math.round(px / PX_POR_DIA));
   return d;
+}
+
+/* ================= FORNECEDOR ================= */
+async function carregarFornecedor() {
+  fornecedorContainer.innerHTML = "";
+
+  const { data, error } = await supabase
+    .from("cronograma_estrutura")
+    .select("fornecedor");
+
+  if (error) {
+    console.error(error);
+    alert("Erro ao carregar fornecedores");
+    return;
+  }
+
+  const lista = [...new Set(data.map(d => d.fornecedor).filter(Boolean))];
+
+  lista.forEach((nome, i) => {
+    const btn = document.createElement("button");
+    btn.className = "btn-filter";
+    btn.textContent = nome;
+    btn.onclick = () => selecionarFornecedor(nome);
+    fornecedorContainer.appendChild(btn);
+    if (i === 0) selecionarFornecedor(nome);
+  });
+}
+
+function selecionarFornecedor(nome) {
+  fornecedorAtual = nome;
+  document.querySelectorAll(".btn-filter").forEach(b =>
+    b.classList.toggle("active", b.textContent === nome)
+  );
+  carregarCronograma();
 }
 
 /* ================= HEADER + PESO ================= */
@@ -56,22 +90,22 @@ function desenharHeader() {
   registros.forEach(r => {
     if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total_kg) return;
 
-    const inicio = new Date(r.data_inicio_plan);
+    const ini = new Date(r.data_inicio_plan);
     const fim = new Date(r.data_fim_plan);
 
     const diasUteis = [];
-    for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
       if (isDiaUtil(d)) diasUteis.push(new Date(d));
     }
+    if (!diasUteis.length) return;
 
     const pesoDiario = r.peso_total_kg / diasUteis.length;
 
     diasUteis.forEach(d => {
-      const keyDia = d.toISOString().slice(0, 10);
-      const keyMes = `${d.getFullYear()}-${d.getMonth() + 1}`;
-
-      pesoDia[keyDia] = (pesoDia[keyDia] || 0) + pesoDiario;
-      pesoMes[keyMes] = (pesoMes[keyMes] || 0) + pesoDiario;
+      const kDia = d.toISOString().slice(0, 10);
+      const kMes = `${d.getFullYear()}-${d.getMonth() + 1}`;
+      pesoDia[kDia] = (pesoDia[kDia] || 0) + pesoDiario;
+      pesoMes[kMes] = (pesoMes[kMes] || 0) + pesoDiario;
     });
   });
 
@@ -85,24 +119,23 @@ function desenharHeader() {
     line.style.left = `${x}px`;
     gantt.appendChild(line);
 
-    const diaKey = data.toISOString().slice(0, 10);
-    const dia = document.createElement("div");
-    dia.className = "day-label";
-    dia.style.left = `${x}px`;
-    dia.innerHTML = `
+    const dKey = data.toISOString().slice(0, 10);
+    const day = document.createElement("div");
+    day.className = "day-label";
+    day.style.left = `${x}px`;
+    day.innerHTML = `
       ${data.getDate()}
-      <div style="font-size:9px;color:#2563eb">
-        ${(pesoDia[diaKey] || 0).toFixed(1)}
+      <div style="font-size:9px">
+        ${(pesoDia[dKey] || 0).toFixed(1)}
       </div>
     `;
 
-    if (data.getDay() === 6) dia.style.color = "#ca8a04";
-    if (data.getDay() === 0) dia.style.color = "#dc2626";
-
-    header.appendChild(dia);
+    if (data.getDay() === 6) day.style.color = "#ca8a04";
+    if (data.getDay() === 0) day.style.color = "#dc2626";
+    header.appendChild(day);
 
     if (data.getDate() === 1) {
-      const mesKey = `${data.getFullYear()}-${data.getMonth() + 1}`;
+      const mKey = `${data.getFullYear()}-${data.getMonth() + 1}`;
       const mes = document.createElement("div");
       mes.className = "month-label";
       mes.style.left = `${x}px`;
@@ -110,7 +143,7 @@ function desenharHeader() {
       mes.innerHTML = `
         ${data.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}
         <div style="font-size:10px">
-          ${(pesoMes[mesKey] || 0).toFixed(1)} t
+          ${(pesoMes[mKey] || 0).toFixed(1)} t
         </div>
       `;
       header.appendChild(mes);
@@ -122,24 +155,21 @@ function desenharHeader() {
 
 function desenharLinhaHoje() {
   const hoje = new Date();
-  const offset = diasEntre(DATA_BASE, hoje);
-  if (offset < 0 || offset > TOTAL_DIAS) return;
+  const off = diasEntre(DATA_BASE, hoje);
+  if (off < 0 || off > TOTAL_DIAS) return;
 
   const line = document.createElement("div");
   line.style.position = "absolute";
-  line.style.left = `${offset * PX_POR_DIA}px`;
+  line.style.left = `${off * PX_POR_DIA}px`;
   line.style.top = "0";
   line.style.bottom = "0";
   line.style.width = "2px";
   line.style.background = "#ef4444";
-  line.style.zIndex = "5";
   gantt.appendChild(line);
 }
 
 /* ================= LOAD ================= */
 async function carregarCronograma() {
-  desenharHeader();
-
   registros = (await supabase
     .from("cronograma_estrutura")
     .select("*")
@@ -154,6 +184,7 @@ async function carregarCronograma() {
     .from("cronograma_dependencias")
     .select("*")).data || [];
 
+  desenharHeader();
   renderizar();
 }
 
@@ -170,7 +201,7 @@ function renderizar() {
       a.estrutura === item.estrutura
     );
 
-    if (prod.length > 0) {
+    if (prod.length) {
       const datas = prod.map(p => new Date(p.data));
       linha = criarBarra(item, "REAL",
         new Date(Math.min(...datas)),
@@ -201,17 +232,14 @@ function criarBarra(item, tipo, inicio, fim, linha) {
   bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
   bar.textContent = `${tipo} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
-  if (tipo === "PLAN") {
-    bar.onmousedown = e => drag(bar, item, e);
-  }
-
+  if (tipo === "PLAN") bar.onmousedown = e => drag(bar, item, e);
   bar.ondblclick = () => abrirModal(item, tipo);
-  gantt.appendChild(bar);
 
+  gantt.appendChild(bar);
   return linha + 1;
 }
 
-/* ================= MODAL ================= */
+/* ================= MODAIS ================= */
 function abrirModal(item, tipo) {
   if (tipo === "PLAN") abrirModalPlan(item);
   if (tipo === "REAL") abrirModalReal(item);
@@ -223,9 +251,9 @@ function abrirModalPlan(item) {
   const sucs = dependencias.filter(d => d.tarefa_id === item.id);
 
   modalContent.innerHTML = `
-    <h3>PLAN - ${item.obra} - ${item.instalacao} - ${item.estrutura}</h3>
-    <p>Início: ${item.data_inicio_plan}</p>
-    <p>Fim: ${item.data_fim_plan}</p>
+    <h3>PLAN - ${item.obra} - ${item.estrutura}</h3>
+    <p>Início planejado: ${item.data_inicio_plan}</p>
+    <p>Fim planejado: ${item.data_fim_plan}</p>
     <p>Peso: ${item.peso_total_kg ?? "-"} kg</p>
 
     <label>Predecessoras</label>
@@ -249,20 +277,17 @@ function abrirModalPlan(item) {
   `;
 
   document.getElementById("salvarDep").onclick = async () => {
-    await supabase.from("cronograma_dependencias").delete().or(
-      `tarefa_id.eq.${item.id},tarefa_dependente_id.eq.${item.id}`
-    );
+    await supabase.from("cronograma_dependencias")
+      .delete()
+      .or(`tarefa_id.eq.${item.id},tarefa_dependente_id.eq.${item.id}`);
 
-    const predsSel = [...document.getElementById("pred").selectedOptions];
-    for (const p of predsSel) {
+    for (const o of document.getElementById("pred").selectedOptions) {
       await supabase.from("cronograma_dependencias")
-        .insert({ tarefa_id: p.value, tarefa_dependente_id: item.id });
+        .insert({ tarefa_id: o.value, tarefa_dependente_id: item.id });
     }
-
-    const sucsSel = [...document.getElementById("suc").selectedOptions];
-    for (const s of sucsSel) {
+    for (const o of document.getElementById("suc").selectedOptions) {
       await supabase.from("cronograma_dependencias")
-        .insert({ tarefa_id: item.id, tarefa_dependente_id: s.value });
+        .insert({ tarefa_id: item.id, tarefa_dependente_id: o.value });
     }
 
     modal.style.display = "none";
@@ -280,14 +305,14 @@ function abrirModalReal(item) {
   );
 
   const datas = prod.map(p => new Date(p.data));
-  const pesoAtual = prod.length; // placeholder
+  const pesoAtual = prod.length;
 
   modalContent.innerHTML = `
     <h3>REAL - ${item.obra} - ${item.estrutura}</h3>
-    <p>Início real: ${datas.length ? datas[0].toISOString().slice(0,10) : "-"}</p>
-    <p>Fim real: ${prod.length ? datas[datas.length - 1].toISOString().slice(0,10) : "-"}</p>
+    <p>Início real: ${datas[0]?.toISOString().slice(0,10) ?? "-"}</p>
+    <p>Fim real: ${datas.length && pesoAtual >= item.peso_total_kg ? datas.at(-1).toISOString().slice(0,10) : "-"}</p>
     <p>Peso produzido: ${pesoAtual} kg</p>
-    <p>Percentual: ${(pesoAtual / item.peso_total_kg * 100).toFixed(1)}%</p>
+    <p>Percentual: ${item.peso_total_kg ? (pesoAtual / item.peso_total_kg * 100).toFixed(1) : "0"}%</p>
     <button onclick="modal.style.display='none'">Fechar</button>
   `;
   modal.style.display = "flex";
@@ -327,15 +352,14 @@ function drag(bar, item, e) {
 /* ================= SAVE ================= */
 document.getElementById("btnSalvar").onclick = async () => {
   for (const r of registros) {
-    await supabase
-      .from("cronograma_estrutura")
+    await supabase.from("cronograma_estrutura")
       .update({
         data_inicio_plan: r.data_inicio_plan,
         data_fim_plan: r.data_fim_plan
       })
       .eq("id", r.id);
   }
-  alert("Cronograma salvo");
+  alert("Cronograma salvo com sucesso");
 };
 
 /* ================= ZOOM ================= */

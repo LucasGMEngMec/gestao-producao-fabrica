@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Cronograma de Produção — Gantt</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- SUPABASE -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     window.createSupabaseClient = createClient;
@@ -16,7 +14,7 @@
 
     body {
       margin: 0;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: Segoe UI, Arial, sans-serif;
       background: #f4f6f8;
     }
 
@@ -42,12 +40,6 @@
       border-radius: 6px;
       border: 1px solid #d1d5db;
       cursor: pointer;
-      background: #e5e7eb;
-    }
-
-    .controls button.active {
-      background: #2563eb;
-      color: #fff;
     }
 
     .controls .save {
@@ -60,42 +52,57 @@
       padding: 12px 24px;
       display: flex;
       gap: 8px;
-      flex-wrap: wrap;
-      background: #ffffff;
+      background: #fff;
       border-bottom: 1px solid #e5e7eb;
     }
 
-    .btn-filter {
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      background: #e5e7eb;
-      cursor: pointer;
+    #gantt-container {
+      display: flex;
     }
 
-    .btn-filter.active {
-      background: #2563eb;
-      color: #fff;
+    /* ==== COLUNAS FIXAS ==== */
+    #gantt-left {
+      width: 640px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+    }
+
+    #gantt-left-header {
+      height: 60px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      font-weight: bold;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f1f5f9;
+      align-items: center;
+      font-size: 12px;
+      padding: 0 6px;
+    }
+
+    #gantt-left-body {
+      position: relative;
     }
 
     #gantt-wrapper {
-      padding: 0 16px 16px;
       overflow-x: auto;
+      flex: 1;
     }
 
     #gantt-header {
       position: sticky;
       top: 0;
       background: #f1f5f9;
-      z-index: 2;
       height: 60px;
+      z-index: 2;
       border-bottom: 1px solid #e5e7eb;
     }
 
     #gantt {
       position: relative;
-      background: #ffffff;
-      border: 1px solid #e5e7eb;
+      background: #fff;
       min-height: 400px;
     }
 
@@ -116,71 +123,18 @@
       z-index: 3;
     }
 
-    .day-label {
-      position: absolute;
-      top: 32px;
-      font-size: 11px;
-      transform: translateX(-50%);
-    }
-
-    .month-label {
-      position: absolute;
-      top: 0;
-      height: 32px;
-      padding: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      background: #e0e7ff;
-      border-right: 1px solid #c7d2fe;
-    }
-
     .bar {
       position: absolute;
-      height: 28px;
+      height: 26px;
       border-radius: 6px;
       font-size: 12px;
-      padding: 4px 8px;
-      cursor: grab;
+      padding: 4px 6px;
       color: #fff;
-      user-select: none;
     }
 
-    .bar.plan { background: #2563eb; }
-    .bar.real { background: #16a34a; }
-    .bar.forecast { background: #f59e0b; }
-
-    /* MODAL */
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.4);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-    }
-
-    .modal-content {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      width: 420px;
-    }
-
-    .modal-content h3 {
-      margin-top: 0;
-    }
-
-    .modal-content label {
-      display: block;
-      margin-top: 10px;
-      font-weight: 600;
-    }
-
-    .modal-content select {
-      width: 100%;
-      padding: 6px;
-    }
+    .plan { background: #2563eb; }
+    .real { background: #16a34a; }
+    .forecast { background: #f59e0b; }
   </style>
 </head>
 
@@ -191,23 +145,28 @@
 <div class="controls">
   <strong>Zoom:</strong>
   <button data-zoom="15">15</button>
-  <button data-zoom="30" class="active">30</button>
+  <button data-zoom="30">30</button>
   <button data-zoom="60">60</button>
 
-  <button class="save" onclick="window.open('curvas.html','blank')">Curva S</button>
-
-  <button class="save" id="btnSalvar">Salvar Cronograma</button>
+  <button class="save">Curva S</button>
+  <button class="save">Salvar Cronograma</button>
 </div>
 
 <div id="fornecedor"></div>
 
-<div id="gantt-wrapper">
-  <div id="gantt-header"></div>
-  <div id="gantt"></div>
-</div>
+<div id="gantt-container">
+  <div id="gantt-left">
+    <div id="gantt-left-header">
+      <div>Tipo</div><div>Obra</div><div>Instalação</div><div>Estrutura</div>
+      <div>Início</div><div>Fim</div><div>Pred.</div><div>Suc.</div>
+    </div>
+    <div id="gantt-left-body"></div>
+  </div>
 
-<div class="modal" id="modal">
-  <div class="modal-content" id="modalContent"></div>
+  <div id="gantt-wrapper">
+    <div id="gantt-header"></div>
+    <div id="gantt"></div>
+  </div>
 </div>
 
 <script type="module" src="gantt.js"></script>

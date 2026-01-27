@@ -58,6 +58,11 @@ function desenharHeader() {
     day.className = "day-label";
     day.style.left = `${x}px`;
     day.textContent = data.getDate();
+
+    const diaSemana = data.getDay();
+    if (diaSemana === 6) day.style.color = "#eab308"; // sábado (amarelo)
+    if (diaSemana === 0) day.style.color = "#dc2626"; // domingo (vermelho)
+
     header.appendChild(day);
 
     if (data.getDate() === 1) {
@@ -150,10 +155,8 @@ function renderPlan(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar plan";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 4}px`;
   bar.style.width = `${dur * PX_POR_DIA}px`;
-
-  // 🔹 SEM peso na barra (conforme solicitado)
   bar.textContent = `PLAN - ${item.instalacao} - ${item.estrutura}`;
 
   bar.onmousedown = e => dragPlan(bar, item, e);
@@ -179,7 +182,7 @@ function renderReal(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar real";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 14}px`;
   bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
   bar.textContent = `REAL - ${item.instalacao} - ${item.estrutura}`;
 
@@ -212,7 +215,7 @@ function renderForecast(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar forecast";
   bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 24}px`;
   bar.style.width = `${durPlan * PX_POR_DIA}px`;
   bar.textContent = `FORECAST - ${item.instalacao} - ${item.estrutura}`;
 

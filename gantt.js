@@ -26,7 +26,7 @@ let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
 function diasEntre(d1, d2) {
-  return Math.max(1, Math.round((new Date(d2) - new Date(d1)) / 86400000));
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 
 function dataPorOffset(offset) {
@@ -35,7 +35,7 @@ function dataPorOffset(offset) {
   return d.toISOString().slice(0, 10);
 }
 
-/* ================= HEADER ================= */
+/* ================= HEADER / GRADE ================= */
 function desenharHeader() {
   gantt.innerHTML = "";
   header.innerHTML = "";
@@ -72,6 +72,16 @@ function desenharHeader() {
       header.appendChild(month);
     }
   }
+
+  /* LINHA HOJE */
+  const hoje = new Date();
+  const offsetHoje = diasEntre(DATA_BASE, hoje);
+  if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
+    const hojeLine = document.createElement("div");
+    hojeLine.className = "today-line";
+    hojeLine.style.left = `${offsetHoje * PX_POR_DIA}px`;
+    gantt.appendChild(hojeLine);
+  }
 }
 
 /* ================= FORNECEDOR ================= */
@@ -100,7 +110,7 @@ function selecionarFornecedor(nome) {
   carregarCronograma();
 }
 
-/* ================= LOAD ================= */
+/* ================= LOAD DATA ================= */
 async function carregarCronograma() {
   desenharHeader();
 
@@ -142,7 +152,9 @@ function renderPlan(item, index) {
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${dur * PX_POR_DIA}px`;
-  bar.textContent = `PLAN | ${item.instalacao} - ${item.estrutura} | Peso: ${item.peso_total || 0} kg`;
+
+  // 🔹 SEM peso na barra (conforme solicitado)
+  bar.textContent = `PLAN - ${item.instalacao} - ${item.estrutura}`;
 
   bar.onmousedown = e => dragPlan(bar, item, e);
   bar.ondblclick = () => abrirModal(item, "PLAN");
@@ -168,8 +180,8 @@ function renderReal(item, index) {
   bar.className = "bar real";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
-  bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-  bar.textContent = `REAL | ${item.instalacao} - ${item.estrutura}`;
+  bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
+  bar.textContent = `REAL - ${item.instalacao} - ${item.estrutura}`;
 
   bar.ondblclick = () => abrirModal(item, "REAL", { inicio, fim });
 
@@ -202,7 +214,7 @@ function renderForecast(item, index) {
   bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
   bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${durPlan * PX_POR_DIA}px`;
-  bar.textContent = `FORECAST | ${item.instalacao} - ${item.estrutura}`;
+  bar.textContent = `FORECAST - ${item.instalacao} - ${item.estrutura}`;
 
   bar.ondblclick = () =>
     abrirModal(item, "FORECAST", { inicio: inicioReal, fim: fimForecast });
@@ -210,7 +222,7 @@ function renderForecast(item, index) {
   gantt.appendChild(bar);
 }
 
-/* ================= DRAG ================= */
+/* ================= DRAG PLAN ================= */
 function dragPlan(bar, item, e) {
   let startX = e.clientX;
 
@@ -238,9 +250,9 @@ function dragPlan(bar, item, e) {
 /* ================= MODAL ================= */
 function abrirModal(item, tipo, datas = {}) {
   modalContent.innerHTML = `
-    <h3>${tipo} | ${item.instalacao} - ${item.estrutura}</h3>
+    <h3>${tipo} - ${item.instalacao} - ${item.estrutura}</h3>
     <p><b>Fornecedor:</b> ${item.fornecedor}</p>
-    <p><b>Peso:</b> ${item.peso_total || 0} kg</p>
+    <p><b>Peso total:</b> ${item.peso_total || 0} kg</p>
     <p><b>Início:</b> ${datas.inicio ? datas.inicio.toISOString().slice(0,10) : item.data_inicio_plan}</p>
     <p><b>Fim:</b> ${datas.fim ? datas.fim.toISOString().slice(0,10) : item.data_fim_plan}</p>
     <br>

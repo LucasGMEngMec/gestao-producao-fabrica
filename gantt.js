@@ -10,7 +10,7 @@ const supabase = window.createSupabaseClient(
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
-const LINHA_ALTURA = 60;
+const LINHA_ALTURA = 90;
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
@@ -112,6 +112,16 @@ function desenharHeader() {
     pesoMes += pesoPorDia[dataKey] || 0;
     diasNoMes++;
   }
+
+  /* ===== LINHA DO DIA DE HOJE ===== */
+  const hoje = new Date();
+  const offsetHoje = diasEntre(DATA_BASE, hoje);
+  if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
+    const hojeLine = document.createElement("div");
+    hojeLine.className = "today-line";
+    hojeLine.style.left = `${offsetHoje * PX_POR_DIA}px`;
+    gantt.appendChild(hojeLine);
+  }
 }
 
 /* ================= FORNECEDOR ================= */
@@ -179,13 +189,11 @@ function renderPlan(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar plan";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 4}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 6}px`;
   bar.style.width = `${dur * PX_POR_DIA}px`;
   bar.textContent = `PLAN - ${item.instalacao} - ${item.estrutura}`;
 
-  bar.onmousedown = e => dragPlan(bar, item, e);
   bar.ondblclick = () => abrirModal(item, "PLAN");
-
   gantt.appendChild(bar);
 }
 
@@ -205,7 +213,7 @@ function renderReal(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar real";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 22}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 34}px`;
   bar.style.width = `${Math.max(1, diasEntre(inicio, fim)) * PX_POR_DIA}px`;
   bar.textContent = `REAL - ${item.instalacao} - ${item.estrutura}`;
 
@@ -229,7 +237,7 @@ function renderForecast(item, index) {
   const bar = document.createElement("div");
   bar.className = "bar forecast";
   bar.style.left = `${diasEntre(DATA_BASE, inicioReal) * PX_POR_DIA}px`;
-  bar.style.top = `${index * LINHA_ALTURA + 40}px`;
+  bar.style.top = `${index * LINHA_ALTURA + 62}px`;
   bar.style.width = `${durPlan * PX_POR_DIA}px`;
   bar.textContent = `FORECAST - ${item.instalacao} - ${item.estrutura}`;
 

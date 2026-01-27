@@ -39,7 +39,13 @@
       padding: 6px 12px;
       border-radius: 6px;
       border: 1px solid #d1d5db;
+      background: #e5e7eb;
       cursor: pointer;
+    }
+
+    .controls button.active {
+      background: #2563eb;
+      color: #fff;
     }
 
     .controls .save {
@@ -54,6 +60,11 @@
       gap: 8px;
       background: #fff;
       border-bottom: 1px solid #e5e7eb;
+    }
+
+    #fornecedor button.active {
+      background: #2563eb;
+      color: #fff;
     }
 
     #gantt-container {
@@ -145,7 +156,7 @@
 <div class="controls">
   <strong>Zoom:</strong>
   <button data-zoom="15">15</button>
-  <button data-zoom="30">30</button>
+  <button data-zoom="30" class="active">30</button>
   <button data-zoom="60">60</button>
 
   <button class="save">Curva S</button>

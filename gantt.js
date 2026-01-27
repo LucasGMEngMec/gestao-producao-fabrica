@@ -8,7 +8,7 @@ const supabase = window.createSupabaseClient(
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
-const LINHA_ALTURA = 90;
+const LINHA_ALTURA = 30;
 
 const gantt = document.getElementById("gantt");
 const header = document.getElementById("gantt-header");
@@ -18,6 +18,7 @@ const fornecedorContainer = document.getElementById("fornecedor");
 let registros = [];
 let fornecedorAtual = null;
 
+/* ================= UTIL ================= */
 function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
@@ -65,6 +66,9 @@ async function carregarFornecedor() {
 
 function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
+  document.querySelectorAll("#fornecedor button").forEach(b =>
+    b.classList.toggle("active", b.textContent === nome)
+  );
   carregarCronograma();
 }
 
@@ -86,57 +90,61 @@ function renderizar() {
   leftBody.innerHTML = "";
 
   registros.forEach((item, i) => {
-    renderLinhaEsquerda(item, i);
-    renderPlan(item, i);
-    renderReal(item, i);
-    renderForecast(item, i);
+    const baseRow = i * 3;
+
+    renderLinhaEsquerda(item, baseRow, "PLAN");
+    renderLinhaEsquerda(item, baseRow + 1, "REAL");
+    renderLinhaEsquerda(item, baseRow + 2, "FORECAST");
+
+    renderPlan(item, baseRow);
+    renderReal(item, baseRow + 1);
+    renderForecast(item, baseRow + 2);
   });
 }
 
-/* ================= COLUNAS ================= */
-function renderLinhaEsquerda(item, i) {
+/* ================= COLUNAS FIXAS ================= */
+function renderLinhaEsquerda(item, rowIndex, tipo) {
+  let inicio = "", fim = "";
+
+  if (tipo === "PLAN") {
+    inicio = item.data_inicio_plan;
+    fim = item.data_fim_plan;
+  }
+  if (tipo === "REAL") {
+    inicio = item.data_inicio_real;
+    fim = item.data_fim_real;
+  }
+  if (tipo === "FORECAST") {
+    inicio = item.data_inicio_real;
+    fim = item.data_fim_forecast;
+  }
+
   const row = document.createElement("div");
   row.style.position = "absolute";
-  row.style.top = `${i * LINHA_ALTURA}px`;
+  row.style.top = `${rowIndex * LINHA_ALTURA}px`;
   row.style.height = `${LINHA_ALTURA}px`;
   row.style.display = "grid";
   row.style.gridTemplateColumns = "repeat(8, 1fr)";
   row.style.fontSize = "12px";
   row.style.alignItems = "center";
   row.style.borderBottom = "1px solid #e5e7eb";
+  row.style.padding = "0 6px";
 
   row.innerHTML = `
-    <div>PLAN</div>
+    <div>${tipo}</div>
     <div>${item.obra}</div>
     <div>${item.instalacao}</div>
     <div>${item.estrutura}</div>
-    <div>${item.data_inicio_plan || ""}</div>
-    <div>${item.data_fim_plan || ""}</div>
+    <div contenteditable="true">${inicio || ""}</div>
+    <div contenteditable="true">${fim || ""}</div>
     <div>${item.predecessora || ""}</div>
     <div>${item.sucessora || ""}</div>
   `;
+
   leftBody.appendChild(row);
 }
 
 /* ================= BARRAS ================= */
-function renderPlan(item, i) {
-  if (!item.data_inicio_plan || !item.data_fim_plan) return;
-  const inicio = new Date(item.data_inicio_plan);
-  const fim = new Date(item.data_fim_plan);
-
-  criarBarra("plan", inicio, fim, i * LINHA_ALTURA + 6, item);
-}
-
-function renderReal(item, i) {
-  if (!item.data_inicio_real || !item.data_fim_real) return;
-  criarBarra("real", new Date(item.data_inicio_real), new Date(item.data_fim_real), i * LINHA_ALTURA + 36, item);
-}
-
-function renderForecast(item, i) {
-  if (!item.data_inicio_real || !item.data_fim_forecast) return;
-  criarBarra("forecast", new Date(item.data_inicio_real), new Date(item.data_fim_forecast), i * LINHA_ALTURA + 66, item);
-}
-
 function criarBarra(tipo, inicio, fim, top, item) {
   const bar = document.createElement("div");
   bar.className = `bar ${tipo}`;
@@ -146,6 +154,33 @@ function criarBarra(tipo, inicio, fim, top, item) {
   bar.textContent = `${tipo.toUpperCase()} - ${item.instalacao} - ${item.estrutura}`;
   gantt.appendChild(bar);
 }
+
+function renderPlan(item, row) {
+  if (item.data_inicio_plan && item.data_fim_plan)
+    criarBarra("plan", new Date(item.data_inicio_plan), new Date(item.data_fim_plan), row * LINHA_ALTURA + 2, item);
+}
+
+function renderReal(item, row) {
+  if (item.data_inicio_real && item.data_fim_real)
+    criarBarra("real", new Date(item.data_inicio_real), new Date(item.data_fim_real), row * LINHA_ALTURA + 2, item);
+}
+
+function renderForecast(item, row) {
+  if (item.data_inicio_real && item.data_fim_forecast)
+    criarBarra("forecast", new Date(item.data_inicio_real), new Date(item.data_fim_forecast), row * LINHA_ALTURA + 2, item);
+}
+
+/* ================= ZOOM ================= */
+document.querySelectorAll("[data-zoom]").forEach(btn => {
+  btn.onclick = () => {
+    PX_POR_DIA = Number(btn.dataset.zoom);
+    document.querySelectorAll("[data-zoom]").forEach(b =>
+      b.classList.toggle("active", b === btn)
+    );
+    desenharHeader();
+    renderizar();
+  };
+});
 
 /* ================= INIT ================= */
 carregarFornecedor();

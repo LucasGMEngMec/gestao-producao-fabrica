@@ -32,14 +32,77 @@ function desenharHeader() {
   gantt.style.width = `${largura}px`;
   header.style.width = `${largura}px`;
 
+  let pesoPorDia = {};
+
+  registros.forEach(r => {
+    if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total) return;
+
+    const ini = new Date(r.data_inicio_plan);
+    const fim = new Date(r.data_fim_plan);
+
+    for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
+      const key = d.toISOString().slice(0, 10);
+      pesoPorDia[key] = (pesoPorDia[key] || 0) + r.peso_total;
+    }
+  });
+
+  let mesAtual = null;
+  let pesoMes = 0;
+  let inicioMesX = 0;
+  let diasMes = 0;
+
   for (let d = 0; d <= TOTAL_DIAS; d++) {
     const x = d * PX_POR_DIA;
+    const data = new Date(DATA_BASE);
+    data.setDate(data.getDate() + d);
+    const dataKey = data.toISOString().slice(0, 10);
+
     const line = document.createElement("div");
     line.className = "grid-line";
     line.style.left = `${x}px`;
     gantt.appendChild(line);
+
+    const day = document.createElement("div");
+    day.className = "day-label";
+    day.style.left = `${x}px`;
+    day.innerHTML = `
+      ${data.getDate()}
+      <div style="font-size:10px;color:#64748b">
+        ${((pesoPorDia[dataKey] || 0) / 1000).toFixed(1)} t
+      </div>
+    `;
+
+    const diaSemana = data.getDay();
+    if (diaSemana === 6) day.style.color = "#eab308";
+    if (diaSemana === 0) day.style.color = "#dc2626";
+
+    header.appendChild(day);
+
+    if (mesAtual !== data.getMonth()) {
+      if (mesAtual !== null) {
+        const month = document.createElement("div");
+        month.className = "month-label";
+        month.style.left = `${inicioMesX}px`;
+        month.style.width = `${diasMes * PX_POR_DIA}px`;
+        month.textContent =
+          `${new Date(data.getFullYear(), mesAtual).toLocaleDateString("pt-BR", {
+            month: "short",
+            year: "numeric"
+          })} | ${(pesoMes / 1000).toFixed(1)} t`;
+        header.appendChild(month);
+      }
+
+      mesAtual = data.getMonth();
+      pesoMes = 0;
+      inicioMesX = x;
+      diasMes = 0;
+    }
+
+    pesoMes += pesoPorDia[dataKey] || 0;
+    diasMes++;
   }
 
+  /* ===== LINHA DO DIA DE HOJE ===== */
   const hoje = new Date();
   const offsetHoje = diasEntre(DATA_BASE, hoje);
   if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
@@ -52,7 +115,10 @@ function desenharHeader() {
 
 /* ================= FORNECEDOR ================= */
 async function carregarFornecedor() {
-  const { data } = await supabase.from("cronograma_estrutura").select("fornecedor");
+  const { data } = await supabase
+    .from("cronograma_estrutura")
+    .select("fornecedor");
+
   fornecedorContainer.innerHTML = "";
 
   [...new Set(data.map(d => d.fornecedor))].forEach((nome, i) => {
@@ -90,20 +156,20 @@ function renderizar() {
   leftBody.innerHTML = "";
 
   registros.forEach((item, i) => {
-    const baseRow = i * 3;
+    const base = i * 3;
 
-    renderLinhaEsquerda(item, baseRow, "PLAN");
-    renderLinhaEsquerda(item, baseRow + 1, "REAL");
-    renderLinhaEsquerda(item, baseRow + 2, "FORECAST");
+    renderLinhaEsquerda(item, base, "PLAN");
+    renderLinhaEsquerda(item, base + 1, "REAL");
+    renderLinhaEsquerda(item, base + 2, "FORECAST");
 
-    renderPlan(item, baseRow);
-    renderReal(item, baseRow + 1);
-    renderForecast(item, baseRow + 2);
+    renderPlan(item, base);
+    renderReal(item, base + 1);
+    renderForecast(item, base + 2);
   });
 }
 
 /* ================= COLUNAS FIXAS ================= */
-function renderLinhaEsquerda(item, rowIndex, tipo) {
+function renderLinhaEsquerda(item, row, tipo) {
   let inicio = "", fim = "";
 
   if (tipo === "PLAN") {
@@ -119,37 +185,37 @@ function renderLinhaEsquerda(item, rowIndex, tipo) {
     fim = item.data_fim_forecast;
   }
 
-  const row = document.createElement("div");
-  row.style.position = "absolute";
-  row.style.top = `${rowIndex * LINHA_ALTURA}px`;
-  row.style.height = `${LINHA_ALTURA}px`;
-  row.style.display = "grid";
-  row.style.gridTemplateColumns = "repeat(8, 1fr)";
-  row.style.fontSize = "12px";
-  row.style.alignItems = "center";
-  row.style.borderBottom = "1px solid #e5e7eb";
-  row.style.padding = "0 6px";
+  const rowDiv = document.createElement("div");
+  rowDiv.style.position = "absolute";
+  rowDiv.style.top = `${row * LINHA_ALTURA}px`;
+  rowDiv.style.height = `${LINHA_ALTURA}px`;
+  rowDiv.style.display = "grid";
+  rowDiv.style.gridTemplateColumns = "repeat(8, 1fr)";
+  rowDiv.style.fontSize = "12px";
+  rowDiv.style.alignItems = "center";
+  rowDiv.style.borderBottom = "1px solid #e5e7eb";
+  rowDiv.style.padding = "0 6px";
 
-  row.innerHTML = `
+  rowDiv.innerHTML = `
     <div>${tipo}</div>
     <div>${item.obra}</div>
     <div>${item.instalacao}</div>
     <div>${item.estrutura}</div>
     <div contenteditable="true">${inicio || ""}</div>
     <div contenteditable="true">${fim || ""}</div>
-    <div>${item.predecessora || ""}</div>
-    <div>${item.sucessora || ""}</div>
+    <div contenteditable="true">${item.predecessora || ""}</div>
+    <div contenteditable="true">${item.sucessora || ""}</div>
   `;
 
-  leftBody.appendChild(row);
+  leftBody.appendChild(rowDiv);
 }
 
 /* ================= BARRAS ================= */
-function criarBarra(tipo, inicio, fim, top, item) {
+function criarBarra(tipo, inicio, fim, row, item) {
   const bar = document.createElement("div");
   bar.className = `bar ${tipo}`;
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${top}px`;
+  bar.style.top = `${row * LINHA_ALTURA + 2}px`;
   bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
   bar.textContent = `${tipo.toUpperCase()} - ${item.instalacao} - ${item.estrutura}`;
   gantt.appendChild(bar);
@@ -157,17 +223,17 @@ function criarBarra(tipo, inicio, fim, top, item) {
 
 function renderPlan(item, row) {
   if (item.data_inicio_plan && item.data_fim_plan)
-    criarBarra("plan", new Date(item.data_inicio_plan), new Date(item.data_fim_plan), row * LINHA_ALTURA + 2, item);
+    criarBarra("plan", new Date(item.data_inicio_plan), new Date(item.data_fim_plan), row, item);
 }
 
 function renderReal(item, row) {
   if (item.data_inicio_real && item.data_fim_real)
-    criarBarra("real", new Date(item.data_inicio_real), new Date(item.data_fim_real), row * LINHA_ALTURA + 2, item);
+    criarBarra("real", new Date(item.data_inicio_real), new Date(item.data_fim_real), row, item);
 }
 
 function renderForecast(item, row) {
   if (item.data_inicio_real && item.data_fim_forecast)
-    criarBarra("forecast", new Date(item.data_inicio_real), new Date(item.data_fim_forecast), row * LINHA_ALTURA + 2, item);
+    criarBarra("forecast", new Date(item.data_inicio_real), new Date(item.data_fim_forecast), row, item);
 }
 
 /* ================= ZOOM ================= */

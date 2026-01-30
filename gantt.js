@@ -31,7 +31,10 @@ function desenharHeader() {
   const largura = TOTAL_DIAS * PX_POR_DIA;
   gantt.style.width = `${largura}px`;
   header.style.width = `${largura}px`;
+  header.style.height = "60px";
+  header.style.position = "relative";
 
+  /* ===== PESO DIÁRIO (DISTRIBUIÇÃO LINEAR - PLAN) ===== */
   let pesoPorDia = {};
 
   registros.forEach(r => {
@@ -39,17 +42,29 @@ function desenharHeader() {
 
     const ini = new Date(r.data_inicio_plan);
     const fim = new Date(r.data_fim_plan);
+    const duracao = diasEntre(ini, fim) + 1;
+    const pesoDia = r.peso_total / duracao;
 
     for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
       const key = d.toISOString().slice(0, 10);
-      pesoPorDia[key] = (pesoPorDia[key] || 0) + r.peso_total;
+      pesoPorDia[key] = (pesoPorDia[key] || 0) + pesoDia;
     }
   });
 
+  /* ===== GRID VERTICAL ===== */
+  for (let d = 0; d <= TOTAL_DIAS; d++) {
+    const line = document.createElement("div");
+    line.className = "grid-line";
+    line.style.left = `${d * PX_POR_DIA}px`;
+    gantt.appendChild(line);
+  }
+
+  /* ===== DIAS + MESES ===== */
   let mesAtual = null;
   let pesoMes = 0;
   let inicioMesX = 0;
   let diasMes = 0;
+  let dataMesRef = null;
 
   for (let d = 0; d <= TOTAL_DIAS; d++) {
     const x = d * PX_POR_DIA;
@@ -57,18 +72,17 @@ function desenharHeader() {
     data.setDate(data.getDate() + d);
     const dataKey = data.toISOString().slice(0, 10);
 
-    const line = document.createElement("div");
-    line.className = "grid-line";
-    line.style.left = `${x}px`;
-    gantt.appendChild(line);
-
+    /* ----- DIA ----- */
     const day = document.createElement("div");
     day.className = "day-label";
     day.style.left = `${x}px`;
+    day.style.top = "28px";
+    day.style.width = `${PX_POR_DIA}px`;
+    day.style.textAlign = "center";
     day.innerHTML = `
       ${data.getDate()}
       <div style="font-size:10px;color:#64748b">
-        ${((pesoPorDia[dataKey] || 0) / 1000).toFixed(1)} t
+        ${((pesoPorDia[dataKey] || 0) / 1000).toFixed(2)} t
       </div>
     `;
 
@@ -78,21 +92,13 @@ function desenharHeader() {
 
     header.appendChild(day);
 
+    /* ----- CONTROLE DE MÊS ----- */
     if (mesAtual !== data.getMonth()) {
       if (mesAtual !== null) {
-        const month = document.createElement("div");
-        month.className = "month-label";
-        month.style.left = `${inicioMesX}px`;
-        month.style.width = `${diasMes * PX_POR_DIA}px`;
-        month.textContent =
-          `${new Date(data.getFullYear(), mesAtual).toLocaleDateString("pt-BR", {
-            month: "short",
-            year: "numeric"
-          })} | ${(pesoMes / 1000).toFixed(1)} t`;
-        header.appendChild(month);
+        criarMes(header, inicioMesX, diasMes, pesoMes, dataMesRef);
       }
-
       mesAtual = data.getMonth();
+      dataMesRef = new Date(data);
       pesoMes = 0;
       inicioMesX = x;
       diasMes = 0;
@@ -102,7 +108,10 @@ function desenharHeader() {
     diasMes++;
   }
 
-  /* ===== LINHA DO DIA DE HOJE ===== */
+  /* ----- FECHA ÚLTIMO MÊS ----- */
+  criarMes(header, inicioMesX, diasMes, pesoMes, dataMesRef);
+
+  /* ===== LINHA DO DIA ATUAL ===== */
   const hoje = new Date();
   const offsetHoje = diasEntre(DATA_BASE, hoje);
   if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
@@ -111,6 +120,23 @@ function desenharHeader() {
     hojeLine.style.left = `${offsetHoje * PX_POR_DIA}px`;
     gantt.appendChild(hojeLine);
   }
+}
+
+/* ===== LABEL DE MÊS ===== */
+function criarMes(container, x, dias, peso, dataRef) {
+  const month = document.createElement("div");
+  month.className = "month-label";
+  month.style.left = `${x}px`;
+  month.style.top = "0";
+  month.style.width = `${dias * PX_POR_DIA}px`;
+  month.style.textAlign = "center";
+  month.textContent =
+    `${dataRef.toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "numeric"
+    })} | ${(peso / 1000).toFixed(2)} t`;
+
+  container.appendChild(month);
 }
 
 /* ================= FORNECEDOR ================= */

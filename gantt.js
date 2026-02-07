@@ -1,26 +1,35 @@
 console.log("JS carregado corretamente");
 
+/* ================= SUPABASE ================= */
 const supabase = window.createSupabaseClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
   "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
 
+/* ================= CONFIG ================= */
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
 const LINHA_ALTURA = 30;
 
+/* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
 const header = document.getElementById("gantt-header");
 const leftBody = document.getElementById("gantt-left-body");
 const fornecedorContainer = document.getElementById("fornecedor");
 
+/* ================= STATE ================= */
 let registros = [];
 let fornecedorAtual = null;
+let colunasVisiveis = true;
 
 /* ================= UTIL ================= */
 function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+}
+
+function formatDate(d) {
+  return d.toISOString().slice(0, 10);
 }
 
 /* ================= HEADER ================= */
@@ -30,149 +39,211 @@ function desenharHeader() {
 
   const largura = TOTAL_DIAS * PX_POR_DIA;
   gantt.style.width = `${largura}px`;
-
   header.style.width = `${largura}px`;
   header.style.height = "70px";
   header.style.position = "relative";
 
-  /* ===== CONTAINERS ===== */
-  const faixaMeses = document.createElement("div");
-  faixaMeses.style.position = "absolute";
-  faixaMeses.style.top = "0";
-  faixaMeses.style.left = "0";
-  faixaMeses.style.height = "30px";
-  faixaMeses.style.width = "100%";
+  const meses = document.createElement("div");
+  const dias = document.createElement("div");
 
-  const faixaDias = document.createElement("div");
-  faixaDias.style.position = "absolute";
-  faixaDias.style.top = "30px";
-  faixaDias.style.left = "0";
-  faixaDias.style.height = "40px";
-  faixaDias.style.width = "100%";
+  meses.style.position = dias.style.position = "absolute";
+  meses.style.top = "0";
+  meses.style.height = "30px";
+  dias.style.top = "30px";
+  dias.style.height = "40px";
+  meses.style.width = dias.style.width = "100%";
 
-  header.appendChild(faixaMeses);
-  header.appendChild(faixaDias);
+  header.appendChild(meses);
+  header.appendChild(dias);
 
-  /* ===== PESO DIÁRIO (PLAN) ===== */
   let pesoPorDia = {};
 
   registros.forEach(r => {
     if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total) return;
-
     const ini = new Date(r.data_inicio_plan);
     const fim = new Date(r.data_fim_plan);
-    const duracao = diasEntre(ini, fim) + 1;
-    const pesoDia = r.peso_total / duracao;
+    const dur = diasEntre(ini, fim) + 1;
+    const pesoDia = r.peso_total / dur;
 
     for (let d = new Date(ini); d <= fim; d.setDate(d.getDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
-      pesoPorDia[key] = (pesoPorDia[key] || 0) + pesoDia;
+      const k = formatDate(d);
+      pesoPorDia[k] = (pesoPorDia[k] || 0) + pesoDia;
     }
   });
 
-  /* ===== GRID ===== */
-  for (let d = 0; d <= TOTAL_DIAS; d++) {
-    const line = document.createElement("div");
-    line.className = "grid-line";
-    line.style.left = `${d * PX_POR_DIA}px`;
-    gantt.appendChild(line);
-  }
+  let mesAtual = null, pesoMes = 0, inicioMesX = 0, diasMes = 0, refMes = null;
 
-  /* ===== DIAS + MESES ===== */
-  let mesAtual = null;
-  let pesoMes = 0;
-  let inicioMesX = 0;
-  let diasMes = 0;
-  let dataMesRef = null;
-
-  for (let d = 0; d <= TOTAL_DIAS; d++) {
-    const x = d * PX_POR_DIA;
+  for (let i = 0; i <= TOTAL_DIAS; i++) {
+    const x = i * PX_POR_DIA;
     const data = new Date(DATA_BASE);
-    data.setDate(data.getDate() + d);
-    const dataKey = data.toISOString().slice(0, 10);
+    data.setDate(data.getDate() + i);
+    const key = formatDate(data);
 
-    /* ----- DIA ----- */
     const day = document.createElement("div");
     day.style.position = "absolute";
     day.style.left = `${x}px`;
     day.style.width = `${PX_POR_DIA}px`;
-    day.style.height = "40px";
     day.style.display = "flex";
     day.style.flexDirection = "column";
     day.style.alignItems = "center";
-    day.style.justifyContent = "center";
     day.style.fontSize = "11px";
-
     day.innerHTML = `
       <div>${data.getDate()}</div>
       <div style="font-size:10px;color:#64748b">
-        ${((pesoPorDia[dataKey] || 0) / 1000).toFixed(2)} t
+        ${((pesoPorDia[key] || 0) / 1000).toFixed(2)} t
       </div>
     `;
+    dias.appendChild(day);
 
-    const diaSemana = data.getDay();
-    if (diaSemana === 6) day.style.color = "#eab308";
-    if (diaSemana === 0) day.style.color = "#dc2626";
-
-    faixaDias.appendChild(day);
-
-    /* ----- MÊS ----- */
     if (mesAtual !== data.getMonth()) {
-      if (mesAtual !== null) {
-        criarMes(faixaMeses, inicioMesX, diasMes, pesoMes, dataMesRef);
-      }
+      if (mesAtual !== null) criarMes(meses, inicioMesX, diasMes, pesoMes, refMes);
       mesAtual = data.getMonth();
-      dataMesRef = new Date(data);
-      pesoMes = 0;
+      refMes = new Date(data);
       inicioMesX = x;
       diasMes = 0;
+      pesoMes = 0;
     }
 
-    pesoMes += pesoPorDia[dataKey] || 0;
+    pesoMes += pesoPorDia[key] || 0;
     diasMes++;
   }
 
-  criarMes(faixaMeses, inicioMesX, diasMes, pesoMes, dataMesRef);
-
-  /* ===== HOJE ===== */
-  const hoje = new Date();
-  const offsetHoje = diasEntre(DATA_BASE, hoje);
-  if (offsetHoje >= 0 && offsetHoje <= TOTAL_DIAS) {
-    const hojeLine = document.createElement("div");
-    hojeLine.className = "today-line";
-    hojeLine.style.left = `${offsetHoje * PX_POR_DIA}px`;
-    gantt.appendChild(hojeLine);
-  }
+  criarMes(meses, inicioMesX, diasMes, pesoMes, refMes);
 }
 
-/* ===== MÊS ===== */
-function criarMes(container, x, dias, peso, dataRef) {
-  const month = document.createElement("div");
-  month.style.position = "absolute";
-  month.style.left = `${x}px`;
-  month.style.width = `${dias * PX_POR_DIA}px`;
-  month.style.height = "30px";
-  month.style.display = "flex";
-  month.style.alignItems = "center";
-  month.style.justifyContent = "center";
-  month.style.fontWeight = "600";
-  month.style.fontSize = "12px";
+function criarMes(container, x, dias, peso, ref) {
+  const m = document.createElement("div");
+  m.style.position = "absolute";
+  m.style.left = `${x}px`;
+  m.style.width = `${dias * PX_POR_DIA}px`;
+  m.style.textAlign = "center";
+  m.style.fontWeight = "600";
+  m.textContent =
+    `${ref.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })} | ${(peso / 1000).toFixed(2)} t`;
+  container.appendChild(m);
+}
 
-  month.textContent =
-    `${dataRef.toLocaleDateString("pt-BR", {
-      month: "short",
-      year: "numeric"
-    })} | ${(peso / 1000).toFixed(2)} t`;
+/* ================= RENDER ================= */
+function renderizar() {
+  gantt.innerHTML = "";
+  leftBody.innerHTML = "";
 
-  container.appendChild(month);
+  registros.forEach((item, i) => {
+    const base = i * 3;
+    ["PLAN", "REAL", "FORECAST"].forEach((tipo, idx) =>
+      renderLinhaEsquerda(item, base + idx, tipo)
+    );
+
+    renderPlan(item, base);
+    renderReal(item, base + 1);
+    renderForecast(item, base + 2);
+  });
+}
+
+/* ================= COLUNAS FIXAS ================= */
+function renderLinhaEsquerda(item, row, tipo) {
+  let inicio = "", fim = "";
+
+  if (tipo === "PLAN") { inicio = item.data_inicio_plan; fim = item.data_fim_plan; }
+  if (tipo === "REAL") { inicio = item.data_inicio_real; fim = item.data_fim_real || formatDate(new Date()); }
+  if (tipo === "FORECAST") { inicio = item.data_inicio_real; fim = item.data_fim_forecast || item.data_fim_plan; }
+
+  const duracao = inicio && fim ? diasEntre(inicio, fim) + 1 : "";
+
+  const rowDiv = document.createElement("div");
+  rowDiv.style.position = "absolute";
+  rowDiv.style.top = `${row * LINHA_ALTURA}px`;
+  rowDiv.style.height = `${LINHA_ALTURA}px`;
+  rowDiv.style.display = "grid";
+  rowDiv.style.gridTemplateColumns = colunasVisiveis
+    ? "40px 60px repeat(6,1fr)"
+    : "40px 60px";
+  rowDiv.style.fontSize = "12px";
+  rowDiv.style.alignItems = "center";
+  rowDiv.style.borderBottom = "1px solid #e5e7eb";
+
+  rowDiv.innerHTML = `
+    <div>${item.id}</div>
+    <div>${tipo}</div>
+    ${colunasVisiveis ? `
+      <div>${item.obra}</div>
+      <div>${item.instalacao}</div>
+      <div>${item.estrutura}</div>
+      <div contenteditable>${inicio || ""}</div>
+      <div contenteditable>${fim || ""}</div>
+      <div>${duracao}</div>
+      <div contenteditable>${item.predecessora || ""}</div>
+      <div contenteditable>${item.sucessora || ""}</div>
+    ` : ""}
+  `;
+
+  leftBody.appendChild(rowDiv);
+}
+
+/* ================= BARRAS ================= */
+function criarBarra(tipo, inicio, fim, row, item, draggable = false) {
+  const bar = document.createElement("div");
+  bar.className = `bar ${tipo}`;
+  bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
+  bar.style.top = `${row * LINHA_ALTURA + 2}px`;
+  bar.style.width = `${(diasEntre(inicio, fim) + 1) * PX_POR_DIA}px`;
+  bar.textContent = `${tipo.toUpperCase()} - ${item.instalacao} - ${item.estrutura}`;
+
+  if (draggable) habilitarDrag(bar, item);
+
+  gantt.appendChild(bar);
+}
+
+function habilitarDrag(bar, item) {
+  let startX;
+
+  bar.onmousedown = e => {
+    startX = e.clientX;
+    document.onmousemove = ev => {
+      const dx = ev.clientX - startX;
+      bar.style.left = `${bar.offsetLeft + dx}px`;
+      startX = ev.clientX;
+    };
+    document.onmouseup = () => {
+      document.onmousemove = null;
+      document.onmouseup = null;
+
+      const dias = Math.round(bar.offsetLeft / PX_POR_DIA);
+      const novaIni = new Date(DATA_BASE);
+      novaIni.setDate(novaIni.getDate() + dias);
+      const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
+      const novaFim = new Date(novaIni);
+      novaFim.setDate(novaIni.getDate() + dur);
+
+      item.data_inicio_plan = formatDate(novaIni);
+      item.data_fim_plan = formatDate(novaFim);
+
+      desenharHeader();
+      renderizar();
+    };
+  };
+}
+
+function renderPlan(item, row) {
+  if (item.data_inicio_plan && item.data_fim_plan)
+    criarBarra("plan", new Date(item.data_inicio_plan), new Date(item.data_fim_plan), row, item, true);
+}
+
+function renderReal(item, row) {
+  if (item.data_inicio_real)
+    criarBarra("real", new Date(item.data_inicio_real),
+      new Date(item.data_fim_real || new Date()), row, item);
+}
+
+function renderForecast(item, row) {
+  if (item.data_inicio_real)
+    criarBarra("forecast", new Date(item.data_inicio_real),
+      new Date(item.data_fim_forecast || item.data_fim_plan), row, item);
 }
 
 /* ================= FORNECEDOR ================= */
 async function carregarFornecedor() {
-  const { data } = await supabase
-    .from("cronograma_estrutura")
-    .select("fornecedor");
-
+  const { data } = await supabase.from("cronograma_estrutura").select("fornecedor");
   fornecedorContainer.innerHTML = "";
 
   [...new Set(data.map(d => d.fornecedor))].forEach((nome, i) => {
@@ -186,13 +257,9 @@ async function carregarFornecedor() {
 
 function selecionarFornecedor(nome) {
   fornecedorAtual = nome;
-  document.querySelectorAll("#fornecedor button").forEach(b =>
-    b.classList.toggle("active", b.textContent === nome)
-  );
   carregarCronograma();
 }
 
-/* ================= LOAD ================= */
 async function carregarCronograma() {
   const { data } = await supabase
     .from("cronograma_estrutura")
@@ -203,104 +270,6 @@ async function carregarCronograma() {
   desenharHeader();
   renderizar();
 }
-
-/* ================= RENDER ================= */
-function renderizar() {
-  gantt.innerHTML = "";
-  leftBody.innerHTML = "";
-
-  registros.forEach((item, i) => {
-    const base = i * 3;
-
-    renderLinhaEsquerda(item, base, "PLAN");
-    renderLinhaEsquerda(item, base + 1, "REAL");
-    renderLinhaEsquerda(item, base + 2, "FORECAST");
-
-    renderPlan(item, base);
-    renderReal(item, base + 1);
-    renderForecast(item, base + 2);
-  });
-}
-
-/* ================= COLUNAS FIXAS ================= */
-function renderLinhaEsquerda(item, row, tipo) {
-  let inicio = "", fim = "";
-
-  if (tipo === "PLAN") {
-    inicio = item.data_inicio_plan;
-    fim = item.data_fim_plan;
-  }
-  if (tipo === "REAL") {
-    inicio = item.data_inicio_real;
-    fim = item.data_fim_real;
-  }
-  if (tipo === "FORECAST") {
-    inicio = item.data_inicio_real;
-    fim = item.data_fim_forecast;
-  }
-
-  const rowDiv = document.createElement("div");
-  rowDiv.style.position = "absolute";
-  rowDiv.style.top = `${row * LINHA_ALTURA}px`;
-  rowDiv.style.height = `${LINHA_ALTURA}px`;
-  rowDiv.style.display = "grid";
-  rowDiv.style.gridTemplateColumns = "repeat(8, 1fr)";
-  rowDiv.style.fontSize = "12px";
-  rowDiv.style.alignItems = "center";
-  rowDiv.style.borderBottom = "1px solid #e5e7eb";
-  rowDiv.style.padding = "0 6px";
-
-  rowDiv.innerHTML = `
-    <div>${tipo}</div>
-    <div>${item.obra}</div>
-    <div>${item.instalacao}</div>
-    <div>${item.estrutura}</div>
-    <div contenteditable="true">${inicio || ""}</div>
-    <div contenteditable="true">${fim || ""}</div>
-    <div contenteditable="true">${item.predecessora || ""}</div>
-    <div contenteditable="true">${item.sucessora || ""}</div>
-  `;
-
-  leftBody.appendChild(rowDiv);
-}
-
-/* ================= BARRAS ================= */
-function criarBarra(tipo, inicio, fim, row, item) {
-  const bar = document.createElement("div");
-  bar.className = `bar ${tipo}`;
-  bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
-  bar.style.top = `${row * LINHA_ALTURA + 2}px`;
-  bar.style.width = `${diasEntre(inicio, fim) * PX_POR_DIA}px`;
-  bar.textContent = `${tipo.toUpperCase()} - ${item.instalacao} - ${item.estrutura}`;
-  gantt.appendChild(bar);
-}
-
-function renderPlan(item, row) {
-  if (item.data_inicio_plan && item.data_fim_plan)
-    criarBarra("plan", new Date(item.data_inicio_plan), new Date(item.data_fim_plan), row, item);
-}
-
-function renderReal(item, row) {
-  if (item.data_inicio_real && item.data_fim_real)
-    criarBarra("real", new Date(item.data_inicio_real), new Date(item.data_fim_real), row, item);
-}
-
-function renderForecast(item, row) {
-  if (item.data_inicio_real && item.data_fim_forecast)
-    criarBarra("forecast", new Date(item.data_inicio_real), new Date(item.data_fim_forecast), row, item);
-}
-
-/* ================= ZOOM ================= */
-document.querySelectorAll("[data-zoom]").forEach(btn => {
-  btn.onclick = () => {
-    PX_POR_DIA = Number(btn.dataset.zoom);
-    document.querySelectorAll("[data-zoom]").forEach(b =>
-      b.classList.toggle("active", b === btn)
-    );
-    desenharHeader();
-    renderizar();
-  };
-});
 
 /* ================= INIT ================= */
 carregarFornecedor();

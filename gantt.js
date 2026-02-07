@@ -17,6 +17,7 @@ const gantt = document.getElementById("gantt");
 const header = document.getElementById("gantt-header");
 const leftBody = document.getElementById("gantt-left-body");
 const fornecedorContainer = document.getElementById("fornecedor");
+const toggleColunasBtn = document.getElementById("toggle-colunas");
 
 /* ================= STATE ================= */
 let registros = [];
@@ -27,7 +28,6 @@ let colunasVisiveis = true;
 function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
-
 function formatDate(d) {
   return d.toISOString().slice(0, 10);
 }
@@ -36,6 +36,8 @@ function formatDate(d) {
 function desenharHeader() {
   gantt.innerHTML = "";
   header.innerHTML = "";
+
+  gantt.style.position = "relative";
 
   const largura = TOTAL_DIAS * PX_POR_DIA;
   gantt.style.width = `${largura}px`;
@@ -130,18 +132,21 @@ function renderizar() {
 
   registros.forEach((item, i) => {
     const base = i * 3;
-    ["PLAN", "REAL", "FORECAST"].forEach((tipo, idx) =>
-      renderLinhaEsquerda(item, base + idx, tipo)
-    );
+
+    renderLinhaEsquerda(item, base, "PLAN", i + 1);
+    renderLinhaEsquerda(item, base + 1, "REAL", i + 1);
+    renderLinhaEsquerda(item, base + 2, "FORECAST", i + 1);
 
     renderPlan(item, base);
     renderReal(item, base + 1);
     renderForecast(item, base + 2);
   });
+
+  gantt.style.height = `${registros.length * 3 * LINHA_ALTURA}px`;
 }
 
 /* ================= COLUNAS FIXAS ================= */
-function renderLinhaEsquerda(item, row, tipo) {
+function renderLinhaEsquerda(item, row, tipo, idVisual) {
   let inicio = "", fim = "";
 
   if (tipo === "PLAN") { inicio = item.data_inicio_plan; fim = item.data_fim_plan; }
@@ -156,26 +161,37 @@ function renderLinhaEsquerda(item, row, tipo) {
   rowDiv.style.height = `${LINHA_ALTURA}px`;
   rowDiv.style.display = "grid";
   rowDiv.style.gridTemplateColumns = colunasVisiveis
-    ? "40px 60px repeat(6,1fr)"
+    ? "40px 60px repeat(7,1fr)"
     : "40px 60px";
   rowDiv.style.fontSize = "12px";
   rowDiv.style.alignItems = "center";
   rowDiv.style.borderBottom = "1px solid #e5e7eb";
 
   rowDiv.innerHTML = `
-    <div>${item.id}</div>
+    <div>${idVisual}</div>
     <div>${tipo}</div>
     ${colunasVisiveis ? `
       <div>${item.obra}</div>
       <div>${item.instalacao}</div>
       <div>${item.estrutura}</div>
-      <div contenteditable>${inicio || ""}</div>
-      <div contenteditable>${fim || ""}</div>
+      <div contenteditable data-field="inicio">${inicio || ""}</div>
+      <div contenteditable data-field="fim">${fim || ""}</div>
       <div>${duracao}</div>
       <div contenteditable>${item.predecessora || ""}</div>
       <div contenteditable>${item.sucessora || ""}</div>
     ` : ""}
   `;
+
+  rowDiv.querySelectorAll("[data-field]").forEach(el => {
+    el.onblur = () => {
+      if (tipo === "PLAN") {
+        if (el.dataset.field === "inicio") item.data_inicio_plan = el.textContent.trim();
+        if (el.dataset.field === "fim") item.data_fim_plan = el.textContent.trim();
+        desenharHeader();
+        renderizar();
+      }
+    };
+  });
 
   leftBody.appendChild(rowDiv);
 }
@@ -184,10 +200,11 @@ function renderLinhaEsquerda(item, row, tipo) {
 function criarBarra(tipo, inicio, fim, row, item, draggable = false) {
   const bar = document.createElement("div");
   bar.className = `bar ${tipo}`;
+  bar.style.position = "absolute";
   bar.style.left = `${diasEntre(DATA_BASE, inicio) * PX_POR_DIA}px`;
   bar.style.top = `${row * LINHA_ALTURA + 2}px`;
   bar.style.width = `${(diasEntre(inicio, fim) + 1) * PX_POR_DIA}px`;
-  bar.textContent = `${tipo.toUpperCase()} - ${item.instalacao} - ${item.estrutura}`;
+  bar.textContent = `${tipo}`;
 
   if (draggable) habilitarDrag(bar, item);
 
@@ -269,6 +286,14 @@ async function carregarCronograma() {
   registros = data || [];
   desenharHeader();
   renderizar();
+}
+
+/* ================= TOGGLE COLUNAS ================= */
+if (toggleColunasBtn) {
+  toggleColunasBtn.onclick = () => {
+    colunasVisiveis = !colunasVisiveis;
+    renderizar();
+  };
 }
 
 /* ================= INIT ================= */

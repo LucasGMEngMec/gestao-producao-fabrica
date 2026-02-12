@@ -68,7 +68,7 @@ function desenharHeader() {
   }
 }
 
-/* ================= REGRAS REAL / FORECAST ================= */
+/* ================= REAL ================= */
 function calcularReal(item) {
 
   const apont = apontamentos
@@ -87,6 +87,7 @@ function calcularReal(item) {
   return { inicio, fim: null };
 }
 
+/* ================= FORECAST ================= */
 function calcularForecast(item, real) {
 
   if (!real.inicio) return { inicio:null, fim:null };
@@ -177,20 +178,6 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     <div>${item.sucessora||""}</div>
   `;
 
-  if(tipo==="PLAN"){
-    div.querySelectorAll("[data-field]")
-      .forEach(el=>{
-        el.onblur=()=>{
-          if(el.dataset.field==="inicio")
-            item.data_inicio_plan=el.textContent.trim();
-          if(el.dataset.field==="fim")
-            item.data_fim_plan=el.textContent.trim();
-          desenharHeader();
-          renderizar();
-        };
-      });
-  }
-
   leftBody.appendChild(div);
 }
 
@@ -216,6 +203,7 @@ function criarBarra(tipo,inicio,fim,row,item,drag=false){
   gantt.appendChild(bar);
 }
 
+/* ================= DRAG PLAN ================= */
 function ativarDrag(bar,item){
 
   let startX;
@@ -254,7 +242,6 @@ function ativarDrag(bar,item){
       item.data_fim_plan=
         formatDate(novaFim);
 
-      desenharHeader();
       renderizar();
     };
   };
@@ -263,34 +250,47 @@ function ativarDrag(bar,item){
 /* ================= FORNECEDOR ================= */
 async function carregarFornecedor(){
 
-  const {data}=
-    await supabase
-      .from("cronograma_estrutura")
-      .select("fornecedor");
+  const {data}=await supabase
+    .from("cronograma_estrutura")
+    .select("fornecedor");
+
+  if(!data || !data.length) return;
 
   fornecedorContainer.innerHTML="";
 
-  [...new Set(data.map(d=>d.fornecedor))]
-    .forEach((nome,i)=>{
+  const unicos=[...new Set(data.map(d=>d.fornecedor))];
 
-      const btn=document.createElement("button");
-      btn.textContent=nome;
-      btn.className="zoom-btn";
-      btn.onclick=()=>{
-        fornecedorAtual=nome;
-        document
-          .querySelectorAll("#fornecedor button")
-          .forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-        carregarCronograma();
-      };
+  unicos.forEach(nome=>{
+    const btn=document.createElement("button");
+    btn.textContent=nome;
 
-      if(i===0) btn.classList.add("active");
-      fornecedorContainer.appendChild(btn);
-    });
+    btn.onclick=()=>{
+      fornecedorAtual=nome;
+
+      document
+        .querySelectorAll("#fornecedor button")
+        .forEach(b=>b.classList.remove("active"));
+
+      btn.classList.add("active");
+      carregarCronograma();
+    };
+
+    fornecedorContainer.appendChild(btn);
+  });
+
+  /* ATIVA PRIMEIRO AUTOMATICAMENTE */
+  fornecedorAtual=unicos[0];
+  fornecedorContainer
+    .querySelector("button")
+    .classList.add("active");
+
+  carregarCronograma();
 }
 
+/* ================= LOAD ================= */
 async function carregarCronograma(){
+
+  if(!fornecedorAtual) return;
 
   const {data}=await supabase
     .from("cronograma_estrutura")

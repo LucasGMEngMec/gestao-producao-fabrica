@@ -60,7 +60,6 @@ function calcularPesoPorDia(){
 
     const ap = apontamentos.filter(a=>a.estrutura===item.estrutura);
 
-    // sem real → distribui plan
     if(!ap.length){
 
       if(!item.data_inicio_plan || !item.data_fim_plan) return;
@@ -68,19 +67,21 @@ function calcularPesoPorDia(){
       const ini=new Date(item.data_inicio_plan);
       const fim=new Date(item.data_fim_plan);
       const dur=diasEntre(ini,fim)+1;
+
       const pesoDiario=item.peso_total/dur;
 
       for(let d=new Date(ini); d<=fim; d.setDate(d.getDate()+1)){
         const key=formatISO(d);
         pesoDia[key]=(pesoDia[key]||0)+pesoDiario;
       }
-    }
-    // com real → 25% por apontamento
-    else{
+
+    } else {
+
       ap.forEach(a=>{
         const key=formatISO(a.data);
         pesoDia[key]=(pesoDia[key]||0)+(item.peso_total/4);
       });
+
     }
 
   });
@@ -95,7 +96,6 @@ function calcularPesoPorDia(){
 function calcularReal(item){
 
   const ap = apontamentos.filter(a=>a.estrutura===item.estrutura);
-
   if(!ap.length) return {inicio:null,fim:null};
 
   ap.sort((a,b)=>new Date(a.data)-new Date(b.data));
@@ -115,10 +115,8 @@ function calcularReal(item){
 
 function calcularForecast(item,real){
 
-  // sem real → não existe forecast
   if(!real.inicio) return {inicio:null,fim:null};
 
-  // já finalizado
   if(real.fim && real.fim!==formatISO(new Date()))
     return {inicio:real.inicio,fim:real.fim};
 
@@ -168,7 +166,7 @@ function desenharHeader(){
     const x=i*PX_POR_DIA;
     const key=formatISO(data);
 
-    /* LINHA VERTICAL */
+    // linha vertical
     const v=document.createElement("div");
     v.style.position="absolute";
     v.style.left=`${x}px`;
@@ -178,7 +176,7 @@ function desenharHeader(){
     v.style.background="#e5e7eb";
     gantt.appendChild(v);
 
-    /* DIA */
+    // dia + peso
     const day=document.createElement("div");
     day.style.position="absolute";
     day.style.left=`${x}px`;
@@ -196,7 +194,6 @@ function desenharHeader(){
 
     header.appendChild(day);
 
-    /* controle mês */
     if(mesAtual!==data.getMonth()){
       if(mesAtual!==null)
         criarMes(inicioMesX,diasMes,pesoMes,refMes);
@@ -233,18 +230,30 @@ function criarMes(x,dias,peso,ref){
 }
 
 /* ========================================================= */
-/* ================= ZOOM ================================ */
+/* ================= BARRAS =============================== */
 /* ========================================================= */
 
-document.querySelectorAll("[data-zoom]").forEach(btn=>{
-  btn.onclick=()=>{
-    PX_POR_DIA=Number(btn.dataset.zoom);
-    document.querySelectorAll("[data-zoom]").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    desenharHeader();
-    renderizar();
-  };
-});
+function criarBarra(tipo,inicio,fim,top,item,drag=false){
+
+  if(!inicio||!fim) return;
+
+  const bar=document.createElement("div");
+  bar.className=`bar ${tipo}`;
+
+  bar.style.position="absolute";
+  bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
+  bar.style.top=`${top}px`;
+  bar.style.height="28px";
+  bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
+  bar.style.cursor=drag?"grab":"default";
+
+  bar.textContent=
+    `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+
+  if(drag) ativarDrag(bar,item);
+
+  gantt.appendChild(bar);
+}
 
 /* ========================================================= */
 /* ================= DRAG ================================ */
@@ -287,72 +296,6 @@ function ativarDrag(bar,item){
 }
 
 /* ========================================================= */
-/* ================= COLUNA FIXA =========================== */
-/* ========================================================= */
-
-function renderLinha(item,top,tipo,id,inicio,fim){
-
-  const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
-  const editavel = tipo==="PLAN";
-
-  const div=document.createElement("div");
-  div.style.position="absolute";
-  div.style.top=`${top}px`;
-  div.style.height="32px";
-  div.style.display="grid";
-  div.style.gridTemplateColumns=
-    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px";
-  div.style.alignItems="center";
-  div.style.fontSize="10px";
-  div.style.borderBottom="1px solid #e5e7eb";
-  div.style.textAlign="center";
-
-  div.innerHTML=`
-    <div>${id}</div>
-    <div>${tipo}</div>
-    <div>${item.obra||""}</div>
-    <div>${item.instalacao||""}</div>
-    <div>${item.estrutura||""}</div>
-    <div ${editavel?'contenteditable data-field="inicio"':''}>${formatBR(inicio)}</div>
-    <div ${editavel?'contenteditable data-field="fim"':''}>${formatBR(fim)}</div>
-    <div ${editavel?'contenteditable data-field="duracao"':''}>${dur}</div>
-    <div ${editavel?'contenteditable data-field="pred"':''}>${item.predecessora||""}</div>
-    <div ${editavel?'contenteditable data-field="suc"':''}>${item.sucessora||""}</div>
-  `;
-
-  if(editavel){
-    div.querySelectorAll("[data-field]").forEach(el=>{
-      el.onblur=()=>{
-
-        if(el.dataset.field==="inicio")
-          item.data_inicio_plan=parseBR(el.textContent.trim());
-
-        if(el.dataset.field==="fim")
-          item.data_fim_plan=parseBR(el.textContent.trim());
-
-        if(el.dataset.field==="duracao"){
-          const dias=Number(el.textContent);
-          const novaFim=new Date(item.data_inicio_plan);
-          novaFim.setDate(novaFim.getDate()+dias-1);
-          item.data_fim_plan=formatISO(novaFim);
-        }
-
-        if(el.dataset.field==="pred")
-          item.predecessora=el.textContent.trim();
-
-        if(el.dataset.field==="suc")
-          item.sucessora=el.textContent.trim();
-
-        desenharHeader();
-        renderizar();
-      };
-    });
-  }
-
-  leftBody.appendChild(div);
-}
-
-/* ========================================================= */
 /* ================= RENDER =============================== */
 /* ========================================================= */
 
@@ -369,15 +312,12 @@ function renderizar(){
     const real=calcularReal(item);
     const forecast=calcularForecast(item,real);
 
-    renderLinha(item,posY,"PLAN",id,item.data_inicio_plan,item.data_fim_plan);
     criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item,true);
     posY+=ALTURA_LINHA+ESPACO;
 
-    renderLinha(item,posY,"REAL",id,real.inicio,real.fim);
     criarBarra("real",real.inicio,real.fim,posY,item);
     posY+=ALTURA_LINHA+ESPACO;
 
-    renderLinha(item,posY,"FORECAST",id,forecast.inicio,forecast.fim);
     criarBarra("forecast",forecast.inicio,forecast.fim,posY,item);
     posY+=ALTURA_LINHA+20;
 

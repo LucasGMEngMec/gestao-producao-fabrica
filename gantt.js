@@ -13,6 +13,7 @@ let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
 const ESPACO_BARRA = 6;
+const ALTURA_LINHA = 32;
 
 /* ================= DOM ================= */
 
@@ -55,7 +56,6 @@ function calcularPesoPorDia(){
     const apont = apontamentos
       .filter(a=>a.estrutura===item.estrutura);
 
-    /* SEM REAL → DISTRIBUI PLAN */
     if(!apont.length){
 
       if(!item.data_inicio_plan || !item.data_fim_plan) return;
@@ -70,15 +70,15 @@ function calcularPesoPorDia(){
         const key=formatISO(d);
         pesoDia[key]=(pesoDia[key]||0)+pesoDiario;
       }
-    }
 
-    /* COM REAL → 25% POR APONTAMENTO */
-    else{
+    } else {
+
       apont.forEach(ap=>{
         const key=formatISO(ap.data);
         const pesoParcial=item.peso_total/4;
         pesoDia[key]=(pesoDia[key]||0)+pesoParcial;
       });
+
     }
 
   });
@@ -137,13 +137,12 @@ function desenharHeader(){
     day.innerHTML=`
       <div>${data.getDate()}</div>
       <div style="font-size:9px;color:#64748b">
-        ${( (pesoDia[key]||0)/1000 ).toFixed(2)}t
+        ${((pesoDia[key]||0)/1000).toFixed(2)}t
       </div>
     `;
 
     header.appendChild(day);
 
-    /* CONTROLE MÊS */
     if(mesAtual!==data.getMonth()){
       if(mesAtual!==null){
         criarMes(inicioMesX,diasMes,pesoMes,refMes);
@@ -224,6 +223,63 @@ function calcularForecast(item,real){
 }
 
 /* ========================================================= */
+/* ================= BARRAS ================================ */
+/* ========================================================= */
+
+function criarBarra(tipo,inicio,fim,top,item){
+
+  if(!inicio||!fim) return;
+
+  const bar=document.createElement("div");
+  bar.className=`bar ${tipo}`;
+
+  bar.style.position="absolute";
+  bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
+  bar.style.top=`${top}px`;
+  bar.style.height="28px";
+  bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
+
+  bar.textContent=
+    `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+
+  gantt.appendChild(bar);
+}
+
+/* ========================================================= */
+/* ================= COLUNA FIXA =========================== */
+/* ========================================================= */
+
+function renderLinha(item,top,tipo,id,inicio,fim){
+
+  const div=document.createElement("div");
+
+  div.style.position="absolute";
+  div.style.top=`${top}px`;
+  div.style.height="32px";
+  div.style.display="grid";
+  div.style.gridTemplateColumns=
+    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px 60px";
+  div.style.fontSize="10px";
+  div.style.alignItems="center";
+  div.style.borderBottom="1px solid #e5e7eb";
+
+  div.innerHTML=`
+    <div>${id}</div>
+    <div>${tipo}</div>
+    <div>${item.obra||""}</div>
+    <div>${item.instalacao||""}</div>
+    <div>${item.estrutura||""}</div>
+    <div>${formatBR(inicio)}</div>
+    <div>${formatBR(fim)}</div>
+    <div>${inicio&&fim?diasEntre(inicio,fim)+1:""}</div>
+    <div>${item.predecessora||""}</div>
+    <div>${item.sucessora||""}</div>
+  `;
+
+  leftBody.appendChild(div);
+}
+
+/* ========================================================= */
 /* ================= RENDER ================================ */
 /* ========================================================= */
 
@@ -237,19 +293,20 @@ function renderizar(){
 
   registros.forEach(item=>{
 
-    const altura=32;
-
     const real=calcularReal(item);
     const forecast=calcularForecast(item,real);
 
-    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item,true);
-    posY+=altura+ESPACO_BARRA;
+    renderLinha(item,posY,"PLAN",id,item.data_inicio_plan,item.data_fim_plan);
+    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item);
+    posY+=ALTURA_LINHA+ESPACO_BARRA;
 
-    criarBarra("real",real.inicio,real.fim,posY,item,false);
-    posY+=altura+ESPACO_BARRA;
+    renderLinha(item,posY,"REAL",id,real.inicio,real.fim);
+    criarBarra("real",real.inicio,real.fim,posY,item);
+    posY+=ALTURA_LINHA+ESPACO_BARRA;
 
-    criarBarra("forecast",forecast.inicio,forecast.fim,posY,item,false);
-    posY+=altura+20;
+    renderLinha(item,posY,"FORECAST",id,forecast.inicio,forecast.fim);
+    criarBarra("forecast",forecast.inicio,forecast.fim,posY,item);
+    posY+=ALTURA_LINHA+20;
 
     id++;
   });
@@ -258,7 +315,7 @@ function renderizar(){
 }
 
 /* ========================================================= */
-/* ================= SUPABASE LOAD ========================== */
+/* ================= SUPABASE =============================== */
 /* ========================================================= */
 
 async function carregarFornecedor(){

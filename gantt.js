@@ -1,29 +1,24 @@
 console.log("JS carregado corretamente");
 
 /* ================= SUPABASE ================= */
-
 const supabase = window.createSupabaseClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
   "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
 
 /* ================= CONFIG ================= */
-
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
-const ALTURA_LINHA = 32;
-const ESPACO = 6;
+let LINHA_BASE = 28;
 
 /* ================= DOM ================= */
-
 const gantt = document.getElementById("gantt");
 const header = document.getElementById("gantt-header");
 const leftBody = document.getElementById("gantt-left-body");
 const fornecedorContainer = document.getElementById("fornecedor");
 
 /* ================= STATE ================= */
-
 let registros = [];
 let apontamentos = [];
 let fornecedorAtual = null;
@@ -43,98 +38,28 @@ function formatBR(d){
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-/* ========================================================= */
-/* ================= PESO POR DIA ========================== */
-/* ========================================================= */
-
-function calcularPesoPorDia(){
-
-  const pesoDia={};
-
-  registros.forEach(item=>{
-
-    const ap = apontamentos.filter(a=>a.estrutura===item.estrutura);
-
-    if(!ap.length){
-
-      if(!item.data_inicio_plan || !item.data_fim_plan) return;
-
-      const ini=new Date(item.data_inicio_plan);
-      const fim=new Date(item.data_fim_plan);
-      const dur=diasEntre(ini,fim)+1;
-
-      const pesoDiario=item.peso_total/dur;
-
-      for(let d=new Date(ini); d<=fim; d.setDate(d.getDate()+1)){
-        const key=formatISO(d);
-        pesoDia[key]=(pesoDia[key]||0)+pesoDiario;
-      }
-
-    } else {
-
-      ap.forEach(a=>{
-        const key=formatISO(a.data);
-        pesoDia[key]=(pesoDia[key]||0)+(item.peso_total/4);
-      });
-
-    }
-
-  });
-
-  return pesoDia;
+function parseBR(text){
+  const [dia,mes,ano]=text.split("/");
+  return `${ano}-${mes}-${dia}`;
 }
 
-/* ========================================================= */
-/* ================= REAL ================================= */
-/* ========================================================= */
+/* ================= ZOOM ================= */
 
-function calcularReal(item){
+document.querySelectorAll("[data-zoom]").forEach(btn=>{
+  btn.onclick=()=>{
+    PX_POR_DIA=Number(btn.dataset.zoom);
 
-  const ap = apontamentos.filter(a=>a.estrutura===item.estrutura);
-  if(!ap.length) return {inicio:null,fim:null};
+    document.querySelectorAll("[data-zoom]")
+      .forEach(b=>b.classList.remove("active"));
 
-  ap.sort((a,b)=>new Date(a.data)-new Date(b.data));
+    btn.classList.add("active");
 
-  const inicio=ap[0].data;
-  const total=ap.length*(item.peso_total/4);
+    desenharHeader();
+    renderizar();
+  };
+});
 
-  if(total>=item.peso_total)
-    return {inicio,fim:ap[ap.length-1].data};
-
-  return {inicio,fim:formatISO(new Date())};
-}
-
-/* ========================================================= */
-/* ================= FORECAST ============================== */
-/* ========================================================= */
-
-function calcularForecast(item,real){
-
-  if(!real.inicio) return {inicio:null,fim:null};
-
-  if(real.fim && real.fim!==formatISO(new Date()))
-    return {inicio:real.inicio,fim:real.fim};
-
-  const diasExec=diasEntre(real.inicio,new Date())+1;
-
-  const totalExecutado =
-    apontamentos.filter(a=>a.estrutura===item.estrutura).length
-    *(item.peso_total/4);
-
-  if(!totalExecutado) return {inicio:null,fim:null};
-
-  const media=totalExecutado/diasExec;
-  const diasRest=Math.ceil((item.peso_total-totalExecutado)/media);
-
-  const fimPrev=new Date();
-  fimPrev.setDate(fimPrev.getDate()+diasRest);
-
-  return {inicio:real.inicio,fim:formatISO(fimPrev)};
-}
-
-/* ========================================================= */
-/* ================= HEADER ================================ */
-/* ========================================================= */
+/* ================= HEADER ================= */
 
 function desenharHeader(){
 
@@ -145,7 +70,10 @@ function desenharHeader(){
   header.style.width=`${largura}px`;
   gantt.style.width=`${largura}px`;
 
-  const pesoDia=calcularPesoPorDia();
+  let mesAtual=null;
+  let inicioMesX=0;
+  let diasMes=0;
+  let refMes=null;
 
   for(let i=0;i<=TOTAL_DIAS;i++){
 
@@ -153,8 +81,8 @@ function desenharHeader(){
     data.setDate(data.getDate()+i);
 
     const x=i*PX_POR_DIA;
-    const key=formatISO(data);
 
+    /* linha vertical */
     const v=document.createElement("div");
     v.style.position="absolute";
     v.style.left=`${x}px`;
@@ -164,44 +92,162 @@ function desenharHeader(){
     v.style.background="#e5e7eb";
     gantt.appendChild(v);
 
+    /* dias */
     const day=document.createElement("div");
     day.style.position="absolute";
     day.style.left=`${x}px`;
     day.style.width=`${PX_POR_DIA}px`;
-    day.style.top="30px";
-    day.style.textAlign="center";
     day.style.fontSize="10px";
+    day.style.textAlign="center";
+    day.style.top="30px";
+    day.textContent=data.getDate();
 
-    day.innerHTML=`
-      <div>${data.getDate()}</div>
-      <div style="font-size:9px;color:#64748b">
-        ${((pesoDia[key]||0)/1000).toFixed(2)}t
-      </div>
-    `;
+    if(data.getDay()===6) day.style.background="#fef3c7";
+    if(data.getDay()===0) day.style.background="#fee2e2";
 
     header.appendChild(day);
+
+    /* mês */
+    if(mesAtual!==data.getMonth()){
+      if(mesAtual!==null){
+        criarMes(inicioMesX,diasMes,refMes);
+      }
+      mesAtual=data.getMonth();
+      inicioMesX=x;
+      diasMes=0;
+      refMes=new Date(data);
+    }
+    diasMes++;
   }
+
+  criarMes(inicioMesX,diasMes,refMes);
 }
 
-/* ========================================================= */
-/* ================= COLUNA FIXA =========================== */
-/* ========================================================= */
+function criarMes(x,dias,ref){
+  const m=document.createElement("div");
+  m.style.position="absolute";
+  m.style.left=`${x}px`;
+  m.style.width=`${dias*PX_POR_DIA}px`;
+  m.style.textAlign="center";
+  m.style.fontWeight="600";
+  m.style.fontSize="11px";
+  m.style.top="0";
+  m.textContent=
+    ref.toLocaleDateString("pt-BR",{month:"short",year:"numeric"});
+  header.appendChild(m);
+}
 
-function renderLinha(item,top,tipo,id,inicio,fim){
+/* ================= REAL ================= */
+
+function calcularReal(item){
+
+  const ap=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
+
+  if(!ap.length) return {inicio:null,fim:null};
+
+  ap.sort((a,b)=>new Date(a.data)-new Date(b.data));
+
+  const inicio=ap[0].data;
+  const total=ap.reduce((s,a)=>s+a.peso,0);
+
+  if(total>=item.peso_total)
+    return {inicio,fim:ap[ap.length-1].data};
+
+  return {inicio,fim:formatISO(new Date())};
+}
+
+/* ================= FORECAST ================= */
+
+function calcularForecast(item,real){
+
+  if(!real.inicio) return {inicio:null,fim:null};
+
+  if(real.fim && real.fim!==formatISO(new Date()))
+    return {inicio:real.inicio,fim:real.fim};
+
+  const diasExec=diasEntre(real.inicio,new Date())+1;
+  const ap=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
+
+  const total=ap.reduce((s,a)=>s+a.peso,0);
+  if(!total) return {inicio:real.inicio,fim:item.data_fim_plan};
+
+  const media=total/diasExec;
+  const diasRest=Math.ceil((item.peso_total-total)/media);
+
+  const fimPrev=new Date();
+  fimPrev.setDate(fimPrev.getDate()+diasRest);
+
+  return {inicio:real.inicio,fim:formatISO(fimPrev)};
+}
+
+/* ================= RENDER ================= */
+
+function renderizar(){
+
+  gantt.innerHTML="";
+  leftBody.innerHTML="";
+
+  let linhaAtual=0;
+  let idSequencial=1;
+
+  registros.forEach(item=>{
+
+    const real=calcularReal(item);
+    const forecast=calcularForecast(item,real);
+
+    const alturaExtra=Math.ceil(
+      (item.instalacao||"").length/25
+    )*8;
+
+    const alturaLinha=LINHA_BASE+alturaExtra;
+
+    renderLinha(item,linhaAtual,"PLAN",
+      idSequencial,item.data_inicio_plan,item.data_fim_plan,alturaLinha,true);
+
+    linhaAtual++;
+
+    renderLinha(item,linhaAtual,"REAL",
+      idSequencial,real.inicio,real.fim,alturaLinha,false);
+
+    linhaAtual++;
+
+    renderLinha(item,linhaAtual,"FORECAST",
+      idSequencial,forecast.inicio,forecast.fim,alturaLinha,false);
+
+    criarBarra("plan",item.data_inicio_plan,
+      item.data_fim_plan,linhaAtual-3,item,alturaLinha,true);
+
+    criarBarra("real",real.inicio,
+      real.fim,linhaAtual-2,item,alturaLinha);
+
+    criarBarra("forecast",forecast.inicio,
+      forecast.fim,linhaAtual-1,item,alturaLinha);
+
+    linhaAtual++;
+    idSequencial++;
+  });
+
+  gantt.style.height=`${linhaAtual*LINHA_BASE}px`;
+}
+
+/* ================= COLUNA FIXA ================= */
+
+function renderLinha(item,row,tipo,id,inicio,fim,altura,editavel){
 
   const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
 
   const div=document.createElement("div");
-
   div.style.position="absolute";
-  div.style.top=`${top}px`;
-  div.style.height="32px";
+  div.style.top=`${row*LINHA_BASE}px`;
+  div.style.height=`${altura}px`;
   div.style.display="grid";
-  div.style.gridTemplateColumns="40px 60px 1fr 1fr 1fr 90px 90px 60px";
-  div.style.alignItems="center";
+  div.style.gridTemplateColumns=
+    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px 60px";
   div.style.fontSize="10px";
+  div.style.alignItems="center";
   div.style.borderBottom="1px solid #e5e7eb";
-  div.style.textAlign="center";
 
   div.innerHTML=`
     <div>${id}</div>
@@ -209,75 +255,97 @@ function renderLinha(item,top,tipo,id,inicio,fim){
     <div>${item.obra||""}</div>
     <div>${item.instalacao||""}</div>
     <div>${item.estrutura||""}</div>
-    <div>${formatBR(inicio)}</div>
-    <div>${formatBR(fim)}</div>
-    <div>${dur}</div>
+    <div ${editavel?'contenteditable data-field="inicio"':''}>${formatBR(inicio)}</div>
+    <div ${editavel?'contenteditable data-field="fim"':''}>${formatBR(fim)}</div>
+    <div ${editavel?'contenteditable data-field="duracao"':''}>${dur}</div>
+    <div>${item.predecessora||""}</div>
+    <div>${item.sucessora||""}</div>
   `;
+
+  if(editavel){
+    div.querySelectorAll("[data-field]")
+      .forEach(el=>{
+        el.onblur=()=>{
+          if(el.dataset.field==="inicio"){
+            item.data_inicio_plan=parseBR(el.textContent.trim());
+          }
+          if(el.dataset.field==="fim"){
+            item.data_fim_plan=parseBR(el.textContent.trim());
+          }
+          if(el.dataset.field==="duracao"){
+            const dias=Number(el.textContent);
+            const novaFim=new Date(item.data_inicio_plan);
+            novaFim.setDate(novaFim.getDate()+dias-1);
+            item.data_fim_plan=formatISO(novaFim);
+          }
+          desenharHeader();
+          renderizar();
+        };
+      });
+  }
 
   leftBody.appendChild(div);
 }
 
-/* ========================================================= */
-/* ================= BARRAS ================================ */
-/* ========================================================= */
+/* ================= BARRA ================= */
 
-function criarBarra(tipo,inicio,fim,top,item,drag=false){
+function criarBarra(tipo,inicio,fim,row,item,altura,drag=false){
 
   if(!inicio||!fim) return;
 
   const bar=document.createElement("div");
   bar.className=`bar ${tipo}`;
-
-  bar.style.position="absolute";
   bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
-  bar.style.top=`${top}px`;
-  bar.style.height="28px";
+  bar.style.top=`${row*LINHA_BASE+2}px`;
+  bar.style.height=`${altura-4}px`;
   bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
 
   bar.textContent=
     `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
 
+  if(drag) ativarDrag(bar,item);
+
   gantt.appendChild(bar);
 }
 
-/* ========================================================= */
-/* ================= RENDER ================================ */
-/* ========================================================= */
+/* ================= DRAG ================= */
 
-function renderizar(){
+function ativarDrag(bar,item){
 
-  gantt.innerHTML="";
-  leftBody.innerHTML="";
+  let startX;
 
-  let posY=0;
-  let id=1;
+  bar.onmousedown=e=>{
+    startX=e.clientX;
 
-  registros.forEach(item=>{
+    document.onmousemove=ev=>{
+      const dx=ev.clientX-startX;
+      bar.style.left=`${bar.offsetLeft+dx}px`;
+      startX=ev.clientX;
+    };
 
-    const real=calcularReal(item);
-    const forecast=calcularForecast(item,real);
+    document.onmouseup=()=>{
+      document.onmousemove=null;
+      document.onmouseup=null;
 
-    renderLinha(item,posY,"PLAN",id,item.data_inicio_plan,item.data_fim_plan);
-    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item);
-    posY+=ALTURA_LINHA+ESPACO;
+      const dias=Math.round(bar.offsetLeft/PX_POR_DIA);
 
-    renderLinha(item,posY,"REAL",id,real.inicio,real.fim);
-    criarBarra("real",real.inicio,real.fim,posY,item);
-    posY+=ALTURA_LINHA+ESPACO;
+      const novaIni=new Date(DATA_BASE);
+      novaIni.setDate(novaIni.getDate()+dias);
 
-    renderLinha(item,posY,"FORECAST",id,forecast.inicio,forecast.fim);
-    criarBarra("forecast",forecast.inicio,forecast.fim,posY,item);
-    posY+=ALTURA_LINHA+20;
+      const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
 
-    id++;
-  });
+      const novaFim=new Date(novaIni);
+      novaFim.setDate(novaFim.getDate()+dur);
 
-  gantt.style.height=`${posY}px`;
+      item.data_inicio_plan=formatISO(novaIni);
+      item.data_fim_plan=formatISO(novaFim);
+
+      renderizar();
+    };
+  };
 }
 
-/* ========================================================= */
-/* ================= SUPABASE ============================== */
-/* ========================================================= */
+/* ================= FORNECEDOR ================= */
 
 async function carregarFornecedor(){
 
@@ -292,7 +360,6 @@ async function carregarFornecedor(){
   const unicos=[...new Set(data.map(d=>d.fornecedor))];
 
   unicos.forEach((nome,i)=>{
-
     const btn=document.createElement("button");
     btn.textContent=nome;
 
@@ -315,6 +382,8 @@ async function carregarFornecedor(){
   carregarCronograma();
 }
 
+/* ================= LOAD ================= */
+
 async function carregarCronograma(){
 
   const {data}=await supabase
@@ -333,8 +402,6 @@ async function carregarCronograma(){
   renderizar();
 }
 
-/* ========================================================= */
-/* ================= INIT ================================= */
-/* ========================================================= */
+/* ================= INIT ================= */
 
 carregarFornecedor();

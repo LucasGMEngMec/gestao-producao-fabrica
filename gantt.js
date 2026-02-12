@@ -10,7 +10,7 @@ const supabase = window.createSupabaseClient(
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
-let LINHA_BASE = 34; // 🔧 aumentado para melhor espaçamento
+let LINHA_BASE = 34;
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
@@ -43,7 +43,17 @@ function parseBR(text){
   return `${ano}-${mes}-${dia}`;
 }
 
-/* ================= PESO POR DIA ================= */
+/* ================= ZOOM ================= */
+
+document.querySelectorAll("[data-zoom]").forEach(btn=>{
+  btn.onclick=()=>{
+    PX_POR_DIA=Number(btn.dataset.zoom);
+    desenharHeader();
+    renderizar();
+  };
+});
+
+/* ================= PESO ================= */
 
 function calcularPesoPorDia(){
 
@@ -53,9 +63,7 @@ function calcularPesoPorDia(){
 
     const ap=apontamentos.filter(a=>a.estrutura===item.estrutura);
 
-    // 🔹 SEM REAL → DISTRIBUI PLANEJADO
     if(!ap.length){
-
       if(!item.data_inicio_plan || !item.data_fim_plan) return;
 
       const ini=new Date(item.data_inicio_plan);
@@ -68,16 +76,12 @@ function calcularPesoPorDia(){
         const key=formatISO(d);
         pesoDia[key]=(pesoDia[key]||0)+pesoDiario;
       }
-    }
-
-    // 🔹 COM REAL → 25% POR APONTAMENTO
-    else{
+    }else{
       ap.forEach(a=>{
         const key=formatISO(a.data);
         pesoDia[key]=(pesoDia[key]||0)+(item.peso_total/4);
       });
     }
-
   });
 
   return pesoDia;
@@ -116,9 +120,9 @@ function desenharHeader(){
     day.style.position="absolute";
     day.style.left=`${x}px`;
     day.style.width=`${PX_POR_DIA}px`;
-    day.style.fontSize="10px";
-    day.style.textAlign="center";
     day.style.top="30px";
+    day.style.textAlign="center";
+    day.style.fontSize="10px";
 
     day.innerHTML=`
       <div>${data.getDate()}</div>
@@ -136,7 +140,6 @@ function desenharHeader(){
 function calcularReal(item){
 
   const ap=apontamentos.filter(a=>a.estrutura===item.estrutura);
-
   if(!ap.length) return {inicio:null,fim:null};
 
   ap.sort((a,b)=>new Date(a.data)-new Date(b.data));
@@ -156,9 +159,6 @@ function calcularForecast(item,real){
 
   if(!real.inicio) return {inicio:null,fim:null};
 
-  if(real.fim && real.fim!==formatISO(new Date()))
-    return {inicio:real.inicio,fim:real.fim};
-
   const diasExec=diasEntre(real.inicio,new Date())+1;
 
   const total=apontamentos
@@ -173,12 +173,45 @@ function calcularForecast(item,real){
   const fimPrev=new Date();
   fimPrev.setDate(fimPrev.getDate()+diasRest);
 
-  return {inicio:real.inicio,fim:formatISO(fimPrev)};
+  return {
+    inicio:real.inicio,
+    fim:formatISO(fimPrev)
+  };
+}
+
+/* ================= DEPENDÊNCIA + GAP ================= */
+
+function aplicarDependencias(){
+
+  registros.forEach((item,index)=>{
+
+    if(!item.predecessora) return;
+
+    const predIndex=Number(item.predecessora)-1;
+    const pred=registros[predIndex];
+
+    if(!pred) return;
+
+    const gap=Number(item.gap||0);
+
+    const novaIni=new Date(pred.data_fim_plan);
+    novaIni.setDate(novaIni.getDate()+1+gap);
+
+    const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
+
+    const novaFim=new Date(novaIni);
+    novaFim.setDate(novaFim.getDate()+dur);
+
+    item.data_inicio_plan=formatISO(novaIni);
+    item.data_fim_plan=formatISO(novaFim);
+  });
 }
 
 /* ================= RENDER ================= */
 
 function renderizar(){
+
+  aplicarDependencias();
 
   gantt.innerHTML="";
   leftBody.innerHTML="";
@@ -191,29 +224,27 @@ function renderizar(){
     const real=calcularReal(item);
     const forecast=calcularForecast(item,real);
 
-    const alturaLinha=LINHA_BASE;
-
     renderLinha(item,linhaAtual,"PLAN",
-      idSequencial,item.data_inicio_plan,item.data_fim_plan,alturaLinha,true);
+      idSequencial,item.data_inicio_plan,item.data_fim_plan,true);
 
     criarBarra("plan",item.data_inicio_plan,
-      item.data_fim_plan,linhaAtual,item,alturaLinha,true);
+      item.data_fim_plan,linhaAtual,item,true);
 
     linhaAtual++;
 
     renderLinha(item,linhaAtual,"REAL",
-      idSequencial,real.inicio,real.fim,alturaLinha,false);
+      idSequencial,real.inicio,real.fim,false);
 
     criarBarra("real",real.inicio,
-      real.fim,linhaAtual,item,alturaLinha);
+      real.fim,linhaAtual,item);
 
     linhaAtual++;
 
     renderLinha(item,linhaAtual,"FORECAST",
-      idSequencial,forecast.inicio,forecast.fim,alturaLinha,false);
+      idSequencial,forecast.inicio,forecast.fim,false);
 
     criarBarra("forecast",forecast.inicio,
-      forecast.fim,linhaAtual,item,alturaLinha);
+      forecast.fim,linhaAtual,item);
 
     linhaAtual+=2;
     idSequencial++;
@@ -224,17 +255,17 @@ function renderizar(){
 
 /* ================= COLUNA FIXA ================= */
 
-function renderLinha(item,row,tipo,id,inicio,fim,altura,editavel){
+function renderLinha(item,row,tipo,id,inicio,fim,editavel){
 
   const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
 
   const div=document.createElement("div");
   div.style.position="absolute";
   div.style.top=`${row*LINHA_BASE}px`;
-  div.style.height=`${altura}px`;
+  div.style.height=`${LINHA_BASE}px`;
   div.style.display="grid";
   div.style.gridTemplateColumns=
-    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px 60px";
+    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px";
   div.style.fontSize="10px";
   div.style.alignItems="center";
   div.style.borderBottom="1px solid #e5e7eb";
@@ -249,7 +280,7 @@ function renderLinha(item,row,tipo,id,inicio,fim,altura,editavel){
     <div ${editavel?'contenteditable data-field="fim"':''}>${formatBR(fim)}</div>
     <div ${editavel?'contenteditable data-field="duracao"':''}>${dur}</div>
     <div contenteditable data-field="pred">${item.predecessora||""}</div>
-    <div contenteditable data-field="suc">${item.sucessora||""}</div>
+    <div contenteditable data-field="gap">${item.gap||0}</div>
   `;
 
   div.querySelectorAll("[data-field]").forEach(el=>{
@@ -270,8 +301,8 @@ function renderLinha(item,row,tipo,id,inicio,fim,altura,editavel){
       if(el.dataset.field==="pred")
         item.predecessora=el.textContent.trim();
 
-      if(el.dataset.field==="suc")
-        item.sucessora=el.textContent.trim();
+      if(el.dataset.field==="gap")
+        item.gap=Number(el.textContent)||0;
 
       desenharHeader();
       renderizar();
@@ -283,7 +314,7 @@ function renderLinha(item,row,tipo,id,inicio,fim,altura,editavel){
 
 /* ================= BARRA ================= */
 
-function criarBarra(tipo,inicio,fim,row,item,altura,drag=false){
+function criarBarra(tipo,inicio,fim,row,item,drag=false){
 
   if(!inicio||!fim) return;
 
@@ -292,7 +323,7 @@ function criarBarra(tipo,inicio,fim,row,item,altura,drag=false){
   bar.style.position="absolute";
   bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
   bar.style.top=`${row*LINHA_BASE+4}px`;
-  bar.style.height=`${altura-8}px`;
+  bar.style.height=`${LINHA_BASE-8}px`;
   bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
 
   bar.textContent=
@@ -360,9 +391,6 @@ async function carregarFornecedor(){
 
     btn.onclick=()=>{
       fornecedorAtual=nome;
-      document.querySelectorAll("#fornecedor button")
-        .forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
       carregarCronograma();
     };
 
@@ -370,7 +398,6 @@ async function carregarFornecedor(){
 
     if(i===0){
       fornecedorAtual=nome;
-      btn.classList.add("active");
     }
   });
 

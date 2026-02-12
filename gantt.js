@@ -43,11 +43,6 @@ function formatBR(d){
   return new Date(d).toLocaleDateString("pt-BR");
 }
 
-function parseBR(text){
-  const [dia,mes,ano]=text.split("/");
-  return `${ano}-${mes}-${dia}`;
-}
-
 /* ========================================================= */
 /* ================= PESO POR DIA ========================== */
 /* ========================================================= */
@@ -90,7 +85,7 @@ function calcularPesoPorDia(){
 }
 
 /* ========================================================= */
-/* ================= REAL ================================ */
+/* ================= REAL ================================= */
 /* ========================================================= */
 
 function calcularReal(item){
@@ -110,7 +105,7 @@ function calcularReal(item){
 }
 
 /* ========================================================= */
-/* ================= FORECAST ============================ */
+/* ================= FORECAST ============================== */
 /* ========================================================= */
 
 function calcularForecast(item,real){
@@ -138,7 +133,7 @@ function calcularForecast(item,real){
 }
 
 /* ========================================================= */
-/* ================= HEADER =============================== */
+/* ================= HEADER ================================ */
 /* ========================================================= */
 
 function desenharHeader(){
@@ -152,12 +147,6 @@ function desenharHeader(){
 
   const pesoDia=calcularPesoPorDia();
 
-  let mesAtual=null;
-  let inicioMesX=0;
-  let diasMes=0;
-  let pesoMes=0;
-  let refMes=null;
-
   for(let i=0;i<=TOTAL_DIAS;i++){
 
     const data=new Date(DATA_BASE);
@@ -166,7 +155,6 @@ function desenharHeader(){
     const x=i*PX_POR_DIA;
     const key=formatISO(data);
 
-    // linha vertical
     const v=document.createElement("div");
     v.style.position="absolute";
     v.style.left=`${x}px`;
@@ -176,7 +164,6 @@ function desenharHeader(){
     v.style.background="#e5e7eb";
     gantt.appendChild(v);
 
-    // dia + peso
     const day=document.createElement("div");
     day.style.position="absolute";
     day.style.left=`${x}px`;
@@ -193,44 +180,45 @@ function desenharHeader(){
     `;
 
     header.appendChild(day);
-
-    if(mesAtual!==data.getMonth()){
-      if(mesAtual!==null)
-        criarMes(inicioMesX,diasMes,pesoMes,refMes);
-
-      mesAtual=data.getMonth();
-      inicioMesX=x;
-      diasMes=0;
-      pesoMes=0;
-      refMes=new Date(data);
-    }
-
-    pesoMes+=(pesoDia[key]||0);
-    diasMes++;
   }
-
-  criarMes(inicioMesX,diasMes,pesoMes,refMes);
-}
-
-function criarMes(x,dias,peso,ref){
-
-  const m=document.createElement("div");
-  m.style.position="absolute";
-  m.style.left=`${x}px`;
-  m.style.width=`${dias*PX_POR_DIA}px`;
-  m.style.textAlign="center";
-  m.style.fontWeight="600";
-  m.style.fontSize="11px";
-  m.style.top="0";
-
-  m.textContent=
-    `${ref.toLocaleDateString("pt-BR",{month:"short",year:"numeric"})} | ${(peso/1000).toFixed(1)}t`;
-
-  header.appendChild(m);
 }
 
 /* ========================================================= */
-/* ================= BARRAS =============================== */
+/* ================= COLUNA FIXA =========================== */
+/* ========================================================= */
+
+function renderLinha(item,top,tipo,id,inicio,fim){
+
+  const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
+
+  const div=document.createElement("div");
+
+  div.style.position="absolute";
+  div.style.top=`${top}px`;
+  div.style.height="32px";
+  div.style.display="grid";
+  div.style.gridTemplateColumns="40px 60px 1fr 1fr 1fr 90px 90px 60px";
+  div.style.alignItems="center";
+  div.style.fontSize="10px";
+  div.style.borderBottom="1px solid #e5e7eb";
+  div.style.textAlign="center";
+
+  div.innerHTML=`
+    <div>${id}</div>
+    <div>${tipo}</div>
+    <div>${item.obra||""}</div>
+    <div>${item.instalacao||""}</div>
+    <div>${item.estrutura||""}</div>
+    <div>${formatBR(inicio)}</div>
+    <div>${formatBR(fim)}</div>
+    <div>${dur}</div>
+  `;
+
+  leftBody.appendChild(div);
+}
+
+/* ========================================================= */
+/* ================= BARRAS ================================ */
 /* ========================================================= */
 
 function criarBarra(tipo,inicio,fim,top,item,drag=false){
@@ -245,58 +233,15 @@ function criarBarra(tipo,inicio,fim,top,item,drag=false){
   bar.style.top=`${top}px`;
   bar.style.height="28px";
   bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
-  bar.style.cursor=drag?"grab":"default";
 
   bar.textContent=
     `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
-
-  if(drag) ativarDrag(bar,item);
 
   gantt.appendChild(bar);
 }
 
 /* ========================================================= */
-/* ================= DRAG ================================ */
-/* ========================================================= */
-
-function ativarDrag(bar,item){
-
-  let startX;
-
-  bar.onmousedown=e=>{
-    startX=e.clientX;
-
-    document.onmousemove=ev=>{
-      const dx=ev.clientX-startX;
-      bar.style.left=`${bar.offsetLeft+dx}px`;
-      startX=ev.clientX;
-    };
-
-    document.onmouseup=()=>{
-      document.onmousemove=null;
-      document.onmouseup=null;
-
-      const dias=Math.round(bar.offsetLeft/PX_POR_DIA);
-
-      const novaIni=new Date(DATA_BASE);
-      novaIni.setDate(novaIni.getDate()+dias);
-
-      const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
-
-      const novaFim=new Date(novaIni);
-      novaFim.setDate(novaFim.getDate()+dur);
-
-      item.data_inicio_plan=formatISO(novaIni);
-      item.data_fim_plan=formatISO(novaFim);
-
-      desenharHeader();
-      renderizar();
-    };
-  };
-}
-
-/* ========================================================= */
-/* ================= RENDER =============================== */
+/* ================= RENDER ================================ */
 /* ========================================================= */
 
 function renderizar(){
@@ -312,12 +257,15 @@ function renderizar(){
     const real=calcularReal(item);
     const forecast=calcularForecast(item,real);
 
-    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item,true);
+    renderLinha(item,posY,"PLAN",id,item.data_inicio_plan,item.data_fim_plan);
+    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,posY,item);
     posY+=ALTURA_LINHA+ESPACO;
 
+    renderLinha(item,posY,"REAL",id,real.inicio,real.fim);
     criarBarra("real",real.inicio,real.fim,posY,item);
     posY+=ALTURA_LINHA+ESPACO;
 
+    renderLinha(item,posY,"FORECAST",id,forecast.inicio,forecast.fim);
     criarBarra("forecast",forecast.inicio,forecast.fim,posY,item);
     posY+=ALTURA_LINHA+20;
 
@@ -328,7 +276,7 @@ function renderizar(){
 }
 
 /* ========================================================= */
-/* ================= SUPABASE ============================= */
+/* ================= SUPABASE ============================== */
 /* ========================================================= */
 
 async function carregarFornecedor(){
@@ -386,7 +334,7 @@ async function carregarCronograma(){
 }
 
 /* ========================================================= */
-/* ================= INIT ================================ */
+/* ================= INIT ================================= */
 /* ========================================================= */
 
 carregarFornecedor();

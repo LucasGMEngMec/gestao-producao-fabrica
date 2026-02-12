@@ -24,14 +24,23 @@ let apontamentos = [];
 let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
+
 function diasEntre(d1, d2) {
   return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
-function formatDate(d) {
-  return new Date(d).toISOString().slice(0, 10);
+
+function formatDateBR(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString("pt-BR");
 }
 
-/* ================= HEADER ================= */
+function formatISO(date) {
+  return new Date(date).toISOString().slice(0,10);
+}
+
+/* ================= HEADER COMPLETO ================= */
+
 function desenharHeader() {
 
   header.innerHTML = "";
@@ -41,127 +50,208 @@ function desenharHeader() {
   header.style.width = `${largura}px`;
   gantt.style.width = `${largura}px`;
 
-  for (let i = 0; i <= TOTAL_DIAS; i++) {
+  const mesesDiv = document.createElement("div");
+  const diasDiv = document.createElement("div");
 
-    const data = new Date(DATA_BASE);
-    data.setDate(data.getDate() + i);
-    const x = i * PX_POR_DIA;
+  mesesDiv.style.position = "absolute";
+  diasDiv.style.position = "absolute";
 
-    const line = document.createElement("div");
-    line.className = "grid-line";
-    line.style.left = `${x}px`;
+  mesesDiv.style.top = "0px";
+  mesesDiv.style.height = "30px";
+  diasDiv.style.top = "30px";
+  diasDiv.style.height = "30px";
+
+  header.appendChild(mesesDiv);
+  header.appendChild(diasDiv);
+
+  let pesoDia = {};
+  registros.forEach(r => {
+    if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total) return;
+
+    const ini = new Date(r.data_inicio_plan);
+    const fim = new Date(r.data_fim_plan);
+    const dur = diasEntre(ini,fim)+1;
+    const peso = r.peso_total/dur;
+
+    for(let d=new Date(ini); d<=fim; d.setDate(d.getDate()+1)){
+      const key = formatISO(d);
+      pesoDia[key]=(pesoDia[key]||0)+peso;
+    }
+  });
+
+  let mesAtual = null;
+  let inicioMesX = 0;
+  let diasMes = 0;
+  let pesoMes = 0;
+  let refMes = null;
+
+  for(let i=0;i<=TOTAL_DIAS;i++){
+
+    const data=new Date(DATA_BASE);
+    data.setDate(data.getDate()+i);
+    const x=i*PX_POR_DIA;
+    const key=formatISO(data);
+
+    /* grid vertical */
+    const line=document.createElement("div");
+    line.className="grid-line";
+    line.style.left=`${x}px`;
     gantt.appendChild(line);
 
-    const day = document.createElement("div");
-    day.style.position = "absolute";
-    day.style.left = `${x}px`;
-    day.style.width = `${PX_POR_DIA}px`;
-    day.style.textAlign = "center";
-    day.style.fontSize = "11px";
-    day.innerHTML = `<div>${data.getDate()}</div>`;
+    /* linha horizontal */
+    const rowLine=document.createElement("div");
+    rowLine.style.position="absolute";
+    rowLine.style.top=`0px`;
+    rowLine.style.height="100%";
+    rowLine.style.left=`${x}px`;
 
-    const diaSemana = data.getDay();
-    if (diaSemana === 6) day.style.background = "#fef3c7";
-    if (diaSemana === 0) day.style.background = "#fee2e2";
+    /* dias */
+    const day=document.createElement("div");
+    day.style.position="absolute";
+    day.style.left=`${x}px`;
+    day.style.width=`${PX_POR_DIA}px`;
+    day.style.textAlign="center";
+    day.style.fontSize="10px";
+    day.innerHTML=`
+      <div>${data.getDate()}</div>
+      <div style="font-size:9px;color:#64748b">
+        ${((pesoDia[key]||0)/1000).toFixed(2)}t
+      </div>
+    `;
 
-    header.appendChild(day);
+    const diaSemana=data.getDay();
+    if(diaSemana===6) day.style.background="#fef3c7";
+    if(diaSemana===0) day.style.background="#fee2e2";
+
+    diasDiv.appendChild(day);
+
+    if(mesAtual!==data.getMonth()){
+      if(mesAtual!==null){
+        criarMes(mesesDiv,inicioMesX,diasMes,pesoMes,refMes);
+      }
+      mesAtual=data.getMonth();
+      inicioMesX=x;
+      diasMes=0;
+      pesoMes=0;
+      refMes=new Date(data);
+    }
+
+    pesoMes+=pesoDia[key]||0;
+    diasMes++;
   }
+
+  criarMes(mesesDiv,inicioMesX,diasMes,pesoMes,refMes);
+}
+
+function criarMes(container,x,dias,peso,ref){
+  const m=document.createElement("div");
+  m.style.position="absolute";
+  m.style.left=`${x}px`;
+  m.style.width=`${dias*PX_POR_DIA}px`;
+  m.style.textAlign="center";
+  m.style.fontWeight="600";
+  m.style.fontSize="11px";
+  m.textContent=
+    `${ref.toLocaleDateString("pt-BR",{month:"short",year:"numeric"})} | ${(peso/1000).toFixed(1)}t`;
+  container.appendChild(m);
 }
 
 /* ================= REAL ================= */
-function calcularReal(item) {
 
-  const apont = apontamentos
-    .filter(a => a.estrutura === item.estrutura);
+function calcularReal(item){
 
-  if (!apont.length) return { inicio: null, fim: null };
+  const apont=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
 
-  apont.sort((a,b)=> new Date(a.data) - new Date(b.data));
+  if(!apont.length) return {inicio:null,fim:null};
 
-  const inicio = apont[0].data;
-  const totalExecutado = apont.reduce((s,a)=> s + a.peso,0);
+  apont.sort((a,b)=>new Date(a.data)-new Date(b.data));
 
-  if (totalExecutado >= item.peso_total)
-    return { inicio, fim: apont[apont.length-1].data };
+  const inicio=apont[0].data;
+  const total=apont.reduce((s,a)=>s+a.peso,0);
 
-  return { inicio, fim: null };
+  if(total>=item.peso_total)
+    return {inicio,fim:apont[apont.length-1].data};
+
+  return {inicio,fim:formatISO(new Date())};
 }
 
 /* ================= FORECAST ================= */
-function calcularForecast(item, real) {
 
-  if (!real.inicio) return { inicio:null, fim:null };
+function calcularForecast(item,real){
 
-  if (real.fim)
-    return { inicio: real.inicio, fim: real.fim };
+  if(!real.inicio) return {inicio:null,fim:null};
 
-  const diasExecutados = diasEntre(real.inicio, new Date()) + 1;
-  const apont = apontamentos
-    .filter(a => a.estrutura === item.estrutura);
+  if(real.fim && real.fim!==formatISO(new Date()))
+    return {inicio:real.inicio,fim:real.fim};
 
-  const totalExecutado = apont.reduce((s,a)=> s + a.peso,0);
-  if (!totalExecutado) return { inicio: real.inicio, fim: item.data_fim_plan };
+  const diasExec=diasEntre(real.inicio,new Date())+1;
+  const apont=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
 
-  const mediaDia = totalExecutado / diasExecutados;
-  const diasRestantes = Math.ceil((item.peso_total - totalExecutado) / mediaDia);
+  const total=apont.reduce((s,a)=>s+a.peso,0);
+  if(!total) return {inicio:real.inicio,fim:item.data_fim_plan};
 
-  const fimPrev = new Date();
-  fimPrev.setDate(fimPrev.getDate() + diasRestantes);
+  const media=total/diasExec;
+  const diasRest=Math.ceil((item.peso_total-total)/media);
 
-  return { inicio: real.inicio, fim: formatDate(fimPrev) };
+  const fimPrev=new Date();
+  fimPrev.setDate(fimPrev.getDate()+diasRest);
+
+  return {inicio:real.inicio,fim:formatISO(fimPrev)};
 }
 
 /* ================= RENDER ================= */
-function renderizar() {
 
-  gantt.innerHTML = "";
-  leftBody.innerHTML = "";
+function renderizar(){
 
-  registros.forEach((item, index) => {
+  gantt.innerHTML="";
+  leftBody.innerHTML="";
 
-    const idUnico = index + 1;
-    const base = index * 3;
+  registros.forEach((item,index)=>{
 
-    const real = calcularReal(item);
-    const forecast = calcularForecast(item, real);
+    const idUnico=item.id || index+1;
+    const base=index*3;
 
-    renderLinha(item, base, "PLAN", idUnico,
-      item.data_inicio_plan, item.data_fim_plan);
+    const real=calcularReal(item);
+    const forecast=calcularForecast(item,real);
 
-    renderLinha(item, base+1, "REAL", idUnico,
-      real.inicio, real.fim);
+    renderLinha(item,base,"PLAN",idUnico,item.data_inicio_plan,item.data_fim_plan);
+    renderLinha(item,base+1,"REAL",idUnico,real.inicio,real.fim);
+    renderLinha(item,base+2,"FORECAST",idUnico,forecast.inicio,forecast.fim);
 
-    renderLinha(item, base+2, "FORECAST", idUnico,
-      forecast.inicio, forecast.fim);
+    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,base,item,true);
+    criarBarra("real",real.inicio,real.fim,base+1,item);
+    criarBarra("forecast",forecast.inicio,forecast.fim,base+2,item);
 
-    criarBarra("plan", item.data_inicio_plan,
-      item.data_fim_plan, base, item, true);
-
-    criarBarra("real", real.inicio,
-      real.fim, base+1, item);
-
-    criarBarra("forecast", forecast.inicio,
-      forecast.fim, base+2, item);
+    /* linha horizontal cinza */
+    const line=document.createElement("div");
+    line.style.position="absolute";
+    line.style.top=`${(base+3)*LINHA_ALTURA}px`;
+    line.style.left="0px";
+    line.style.width="100%";
+    line.style.height="1px";
+    line.style.background="#f1f5f9";
+    gantt.appendChild(line);
   });
 
-  gantt.style.height =
-    `${registros.length * 3 * LINHA_ALTURA}px`;
+  gantt.style.height=`${registros.length*3*LINHA_ALTURA}px`;
 }
 
-/* ================= COLUNAS FIXAS ================= */
+/* ================= COLUNA FIXA ================= */
+
 function renderLinha(item,row,tipo,id,inicio,fim){
 
-  const dur = (inicio && fim)
-    ? diasEntre(inicio,fim)+1 : "";
+  const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
 
-  const div = document.createElement("div");
+  const div=document.createElement("div");
   div.style.position="absolute";
   div.style.top=`${row*LINHA_ALTURA}px`;
   div.style.height=`${LINHA_ALTURA}px`;
   div.style.display="grid";
   div.style.gridTemplateColumns=
-    "50px 70px repeat(8,1fr)";
-  div.style.fontSize="12px";
+    "50px 60px 1fr 1fr 1fr 90px 90px 70px 60px 60px";
+  div.style.fontSize="11px";
   div.style.alignItems="center";
   div.style.borderBottom="1px solid #e5e7eb";
 
@@ -171,8 +261,8 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     <div>${item.obra||""}</div>
     <div>${item.instalacao||""}</div>
     <div>${item.estrutura||""}</div>
-    <div contenteditable data-field="inicio">${inicio||""}</div>
-    <div contenteditable data-field="fim">${fim||""}</div>
+    <div>${formatDateBR(inicio)}</div>
+    <div>${formatDateBR(fim)}</div>
     <div>${dur}</div>
     <div>${item.predecessora||""}</div>
     <div>${item.sucessora||""}</div>
@@ -182,18 +272,16 @@ function renderLinha(item,row,tipo,id,inicio,fim){
 }
 
 /* ================= BARRAS ================= */
+
 function criarBarra(tipo,inicio,fim,row,item,drag=false){
 
   if(!inicio||!fim) return;
 
   const bar=document.createElement("div");
   bar.className=`bar ${tipo}`;
-  bar.style.left=
-    `${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
-  bar.style.top=
-    `${row*LINHA_ALTURA+2}px`;
-  bar.style.width=
-    `${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
+  bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
+  bar.style.top=`${row*LINHA_ALTURA+2}px`;
+  bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
 
   bar.textContent=
     `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
@@ -203,7 +291,8 @@ function criarBarra(tipo,inicio,fim,row,item,drag=false){
   gantt.appendChild(bar);
 }
 
-/* ================= DRAG PLAN ================= */
+/* ================= DRAG ================= */
+
 function ativarDrag(bar,item){
 
   let startX;
@@ -213,8 +302,7 @@ function ativarDrag(bar,item){
 
     document.onmousemove=ev=>{
       const dx=ev.clientX-startX;
-      bar.style.left=
-        `${bar.offsetLeft+dx}px`;
+      bar.style.left=`${bar.offsetLeft+dx}px`;
       startX=ev.clientX;
     };
 
@@ -222,25 +310,18 @@ function ativarDrag(bar,item){
       document.onmousemove=null;
       document.onmouseup=null;
 
-      const dias=
-        Math.round(bar.offsetLeft/PX_POR_DIA);
+      const dias=Math.round(bar.offsetLeft/PX_POR_DIA);
 
       const novaIni=new Date(DATA_BASE);
-      novaIni.setDate(
-        novaIni.getDate()+dias);
+      novaIni.setDate(novaIni.getDate()+dias);
 
-      const dur=
-        diasEntre(item.data_inicio_plan,
-                   item.data_fim_plan);
+      const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
 
       const novaFim=new Date(novaIni);
-      novaFim.setDate(
-        novaIni.getDate()+dur);
+      novaFim.setDate(novaFim.getDate()+dur);
 
-      item.data_inicio_plan=
-        formatDate(novaIni);
-      item.data_fim_plan=
-        formatDate(novaFim);
+      item.data_inicio_plan=formatISO(novaIni);
+      item.data_fim_plan=formatISO(novaFim);
 
       renderizar();
     };
@@ -248,49 +329,46 @@ function ativarDrag(bar,item){
 }
 
 /* ================= FORNECEDOR ================= */
+
 async function carregarFornecedor(){
 
   const {data}=await supabase
     .from("cronograma_estrutura")
     .select("fornecedor");
 
-  if(!data || !data.length) return;
+  if(!data||!data.length) return;
 
   fornecedorContainer.innerHTML="";
 
   const unicos=[...new Set(data.map(d=>d.fornecedor))];
 
-  unicos.forEach(nome=>{
+  unicos.forEach((nome,i)=>{
+
     const btn=document.createElement("button");
     btn.textContent=nome;
 
     btn.onclick=()=>{
       fornecedorAtual=nome;
-
-      document
-        .querySelectorAll("#fornecedor button")
+      document.querySelectorAll("#fornecedor button")
         .forEach(b=>b.classList.remove("active"));
-
       btn.classList.add("active");
       carregarCronograma();
     };
 
     fornecedorContainer.appendChild(btn);
-  });
 
-  /* ATIVA PRIMEIRO AUTOMATICAMENTE */
-  fornecedorAtual=unicos[0];
-  fornecedorContainer
-    .querySelector("button")
-    .classList.add("active");
+    if(i===0){
+      fornecedorAtual=nome;
+      btn.classList.add("active");
+    }
+  });
 
   carregarCronograma();
 }
 
 /* ================= LOAD ================= */
-async function carregarCronograma(){
 
-  if(!fornecedorAtual) return;
+async function carregarCronograma(){
 
   const {data}=await supabase
     .from("cronograma_estrutura")
@@ -309,4 +387,5 @@ async function carregarCronograma(){
 }
 
 /* ================= INIT ================= */
+
 carregarFornecedor();

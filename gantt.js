@@ -210,7 +210,7 @@ function renderizar(){
 
   registros.forEach((item,index)=>{
 
-    const idUnico=item.id || index+1;
+    const idUnico=index+1;
     const base=index*3;
 
     const real=calcularReal(item);

@@ -264,14 +264,20 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     <div>${formatDateBR(inicio)}</div>
     <div>${formatDateBR(fim)}</div>
     <div>${dur}</div>
-    <div>${item.predecessora||""}</div>
-    <div>${item.sucessora||""}</div>
+    <div contenteditable data-field="pred">${item.predecessora||""}</div>
+    <div contenteditable data-field="gap">${item.gap||""}</div>
   `;
 
   div.querySelectorAll("div").forEach(cell=>{
-    cell.style.whiteSpace="normal";
-    cell.style.overflow="hidden";
-    cell.style.textOverflow="ellipsis";
+    el.onblur = () => {
+      if(el.dataset.field === "pred"){
+        item.predecessora = el.textContent.trim();
+      }
+      if(el.dataset.field === "gap"){
+        item.gap = Number(el.textContent.trim()) || 0;
+      }
+      renderizar ();
+    }
   });
 
   leftBody.appendChild(div);

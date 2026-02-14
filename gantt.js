@@ -253,15 +253,8 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     "45px 55px 120px 140px 160px 85px 85px 60px 55px 55px";
   div.style.fontSize="10px";
   div.style.alignItems="center";
-  div.style.padding="0 4px";
   div.style.borderBottom="1px solid #e5e7eb";
-
-  div.querySelectorAll("div").forEach(cell=>{
-    cell.style.whiteSpace="normal";
-    cell.style.overflow="hidden";
-    cell.style.textOverflow="ellipsis";
-  });
-
+ 
   div.innerHTML=`
     <div>${id}</div>
     <div>${tipo}</div>
@@ -274,6 +267,12 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     <div>${item.predecessora||""}</div>
     <div>${item.sucessora||""}</div>
   `;
+
+  div.querySelectorAll("div").forEach(cell=>{
+    cell.style.whiteSpace="normal";
+    cell.style.overflow="hidden";
+    cell.style.textOverflow="ellipsis";
+  });
 
   leftBody.appendChild(div);
 }

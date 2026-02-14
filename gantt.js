@@ -193,31 +193,48 @@ function calcularForecast(item, real) {
 
 /* ================= DEPENDÊNCIAS ================= */
 
-function aplicarDependencias() {
+function aplicarDependencias(){
 
   registros.forEach(item => {
 
-    if (!item.predecessora) return;
+    if(!item.predecessora) return;
 
-    const predId = Number(item.predecessora);
+    const preds = item.predecessora
+      .split(",")
+      .map(p => parseInt(p.trim()))
+      .filter(p => !isNaN(p));
+
+    if(!preds.length) return;
+
+    let maiorFim = null;
+
+    preds.forEach(idPred => {
+
+      const predItem = registros.find(r => r._id === idPred);
+
+      if(!predItem || !predItem.data_fim_plan) return;
+
+      const fimPred = new Date(predItem.data_fim_plan);
+
+      if(!maiorFim || fimPred > maiorFim){
+        maiorFim = fimPred;
+      }
+    });
+
+    if(!maiorFim) return;
+
     const gap = Number(item.gap) || 0;
 
-    const predecessora = registros.find(r => r._id === predId);
-
-    if (!predecessora) return;
-
-    const fimPred = new Date(predecessora.data_fim_plan);
-
-    const novoInicio = new Date(fimPred);
-    novoInicio.setDate(novoInicio.getDate() + gap);
+    const novaDataInicio = new Date(maiorFim);
+    novaDataInicio.setDate(novaDataInicio.getDate() + gap);
 
     const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
 
-    const novoFim = new Date(novoInicio);
-    novoFim.setDate(novoFim.getDate() + dur);
+    const novaDataFim = new Date(novaDataInicio);
+    novaDataFim.setDate(novaDataFim.getDate() + dur);
 
-    item.data_inicio_plan = formatISO(novoInicio);
-    item.data_fim_plan = formatISO(novoFim);
+    item.data_inicio_plan = formatISO(novaDataInicio);
+    item.data_fim_plan = formatISO(novaDataFim);
 
   });
 
@@ -226,7 +243,7 @@ function aplicarDependencias() {
 /* ================= RENDER ================= */
 
 function renderizar() {
-  aplicarDependencias();
+    aplicarDependencias();
 
   gantt.innerHTML = "";
   leftBody.innerHTML = "";

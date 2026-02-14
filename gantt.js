@@ -388,6 +388,12 @@ async function carregarCronograma(){
   registros=data||[];
   apontamentos=ap||[];
 
+  // ID INTERNO PARA DEPENDÊNCIA
+  registros.forEach((item,index)=>{
+    item._id=index+1;
+  });
+
+
   desenharHeader();
   renderizar();
 }

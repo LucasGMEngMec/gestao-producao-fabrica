@@ -250,7 +250,7 @@ function renderLinha(item,row,tipo,id,inicio,fim){
   div.style.height=`${LINHA_ALTURA}px`;
   div.style.display="grid";
   div.style.gridTemplateColumns=
-    "45px 55px 120px 140px 160px 85px 85px 60px 55px 55px";
+    "40px 55px 100px 100px 100px 80px 80px 60px 55px 55px";
   div.style.fontSize="10px";
   div.style.alignItems="center";
   div.style.borderBottom="1px solid #e5e7eb";

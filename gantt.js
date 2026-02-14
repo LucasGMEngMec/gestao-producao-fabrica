@@ -10,7 +10,7 @@ const supabase = window.createSupabaseClient(
 let PX_POR_DIA = 30;
 const DATA_BASE = new Date("2026-01-01");
 const TOTAL_DIAS = 220;
-let LINHA_BASE = 34;
+const LINHA_ALTURA = 30;
 
 /* ================= DOM ================= */
 const gantt = document.getElementById("gantt");
@@ -25,84 +25,65 @@ let fornecedorAtual = null;
 
 /* ================= UTIL ================= */
 
-function diasEntre(d1,d2){
-  return Math.round((new Date(d2)-new Date(d1))/86400000);
+function diasEntre(d1, d2) {
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
 }
 
-function formatISO(d){
-  return new Date(d).toISOString().slice(0,10);
+function formatDateBR(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  return d.toLocaleDateString("pt-BR");
 }
 
-function formatBR(d){
-  if(!d) return "";
-  return new Date(d).toLocaleDateString("pt-BR");
+function formatISO(date) {
+  return new Date(date).toISOString().slice(0,10);
 }
 
-function parseBR(text){
-  const [dia,mes,ano]=text.split("/");
-  return `${ano}-${mes}-${dia}`;
-}
+/* ================= HEADER COMPLETO ================= */
 
-/* ================= ZOOM (CORRIGIDO) ================= */
+function desenharHeader() {
 
-document.querySelectorAll("[data-zoom]").forEach(btn=>{
-  btn.onclick=()=>{
-    PX_POR_DIA = Number(btn.dataset.zoom);
-    desenharHeader();
-    renderizar();
-  };
-});
+  header.innerHTML = "";
+  gantt.innerHTML = "";
 
-/* ================= PESO ================= */
+  const largura = TOTAL_DIAS * PX_POR_DIA;
+  header.style.width = `${largura}px`;
+  gantt.style.width = `${largura}px`;
 
-function calcularPesoPorDia(){
+  const mesesDiv = document.createElement("div");
+  const diasDiv = document.createElement("div");
 
-  const pesoDia={};
+  mesesDiv.style.position = "absolute";
+  diasDiv.style.position = "absolute";
 
-  registros.forEach(item=>{
+  mesesDiv.style.top = "0px";
+  mesesDiv.style.height = "30px";
+  diasDiv.style.top = "30px";
+  diasDiv.style.height = "30px";
 
-    const ap=apontamentos.filter(a=>a.estrutura===item.estrutura);
+  header.appendChild(mesesDiv);
+  header.appendChild(diasDiv);
 
-    if(!ap.length){
+  let pesoDia = {};
+  registros.forEach(r => {
+    if (!r.data_inicio_plan || !r.data_fim_plan || !r.peso_total) return;
 
-      if(!item.data_inicio_plan || !item.data_fim_plan) return;
+    const ini = new Date(r.data_inicio_plan);
+    const fim = new Date(r.data_fim_plan);
+    const dur = diasEntre(ini,fim)+1;
+    const peso = r.peso_total/dur;
 
-      const ini=new Date(item.data_inicio_plan);
-      const fim=new Date(item.data_fim_plan);
-      const dur=diasEntre(ini,fim)+1;
-
-      const pesoDiario=item.peso_total/dur;
-
-      for(let d=new Date(ini); d<=fim; d.setDate(d.getDate()+1)){
-        const key=formatISO(d);
-        pesoDia[key]=(pesoDia[key]||0)+pesoDiario;
-      }
-
-    }else{
-
-      ap.forEach(a=>{
-        const key=formatISO(a.data);
-        pesoDia[key]=(pesoDia[key]||0)+(item.peso_total/4);
-      });
+    for(let d=new Date(ini); d<=fim; d.setDate(d.getDate()+1)){
+      const key = formatISO(d);
+      pesoDia[key]=(pesoDia[key]||0)+peso;
     }
-
   });
 
-  return pesoDia;
-}
-
-/* ================= HEADER ================= */
-
-function desenharHeader(){
-
-  header.innerHTML="";
-  gantt.innerHTML="";
-
-  const largura=TOTAL_DIAS*PX_POR_DIA;
-  header.style.width=`${largura}px`;
-  gantt.style.width=`${largura}px`;
-
-  const pesoDia=calcularPesoPorDia();
+  let mesAtual = null;
+  let inicioMesX = 0;
+  let diasMes = 0;
+  let pesoMes = 0;
+  let refMes = null;
 
   for(let i=0;i<=TOTAL_DIAS;i++){
 
@@ -111,23 +92,26 @@ function desenharHeader(){
     const x=i*PX_POR_DIA;
     const key=formatISO(data);
 
-    const v=document.createElement("div");
-    v.style.position="absolute";
-    v.style.left=`${x}px`;
-    v.style.top="0";
-    v.style.bottom="0";
-    v.style.width="1px";
-    v.style.background="#e5e7eb";
-    gantt.appendChild(v);
+    /* grid vertical */
+    const line=document.createElement("div");
+    line.className="grid-line";
+    line.style.left=`${x}px`;
+    gantt.appendChild(line);
 
+    /* linha horizontal */
+    const rowLine=document.createElement("div");
+    rowLine.style.position="absolute";
+    rowLine.style.top=`0px`;
+    rowLine.style.height="100%";
+    rowLine.style.left=`${x}px`;
+
+    /* dias */
     const day=document.createElement("div");
     day.style.position="absolute";
     day.style.left=`${x}px`;
     day.style.width=`${PX_POR_DIA}px`;
-    day.style.top="30px";
     day.style.textAlign="center";
     day.style.fontSize="10px";
-
     day.innerHTML=`
       <div>${data.getDate()}</div>
       <div style="font-size:9px;color:#64748b">
@@ -135,141 +119,139 @@ function desenharHeader(){
       </div>
     `;
 
-    header.appendChild(day);
+    const diaSemana=data.getDay();
+    if(diaSemana===6) day.style.background="#fef3c7";
+    if(diaSemana===0) day.style.background="#fee2e2";
+
+    diasDiv.appendChild(day);
+
+    if(mesAtual!==data.getMonth()){
+      if(mesAtual!==null){
+        criarMes(mesesDiv,inicioMesX,diasMes,pesoMes,refMes);
+      }
+      mesAtual=data.getMonth();
+      inicioMesX=x;
+      diasMes=0;
+      pesoMes=0;
+      refMes=new Date(data);
+    }
+
+    pesoMes+=pesoDia[key]||0;
+    diasMes++;
   }
+
+  criarMes(mesesDiv,inicioMesX,diasMes,pesoMes,refMes);
+}
+
+function criarMes(container,x,dias,peso,ref){
+  const m=document.createElement("div");
+  m.style.position="absolute";
+  m.style.left=`${x}px`;
+  m.style.width=`${dias*PX_POR_DIA}px`;
+  m.style.textAlign="center";
+  m.style.fontWeight="600";
+  m.style.fontSize="11px";
+  m.textContent=
+    `${ref.toLocaleDateString("pt-BR",{month:"short",year:"numeric"})} | ${(peso/1000).toFixed(1)}t`;
+  container.appendChild(m);
 }
 
 /* ================= REAL ================= */
 
 function calcularReal(item){
 
-  const ap=apontamentos.filter(a=>a.estrutura===item.estrutura);
+  const apont=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
 
-  if(!ap.length) return {inicio:null,fim:null};
+  if(!apont.length) return {inicio:null,fim:null};
 
-  ap.sort((a,b)=>new Date(a.data)-new Date(b.data));
+  apont.sort((a,b)=>new Date(a.data)-new Date(b.data));
 
-  const inicio=ap[0].data;
-  const total=ap.length*(item.peso_total/4);
+  const inicio=apont[0].data;
+  const total=apont.reduce((s,a)=>s+a.peso,0);
 
   if(total>=item.peso_total)
-    return {inicio,fim:ap[ap.length-1].data};
+    return {inicio,fim:apont[apont.length-1].data};
 
   return {inicio,fim:formatISO(new Date())};
 }
 
-/* ================= FORECAST (CORRIGIDO) ================= */
+/* ================= FORECAST ================= */
 
 function calcularForecast(item,real){
 
   if(!real.inicio) return {inicio:null,fim:null};
 
-  const ap=apontamentos.filter(a=>a.estrutura===item.estrutura);
-  const total=ap.length*(item.peso_total/4);
-
-  if(!total) return {inicio:null,fim:null};
+  if(real.fim && real.fim!==formatISO(new Date()))
+    return {inicio:real.inicio,fim:real.fim};
 
   const diasExec=diasEntre(real.inicio,new Date())+1;
+  const apont=apontamentos
+    .filter(a=>a.estrutura===item.estrutura);
+
+  const total=apont.reduce((s,a)=>s+a.peso,0);
+  if(!total) return {inicio:real.inicio,fim:item.data_fim_plan};
+
   const media=total/diasExec;
   const diasRest=Math.ceil((item.peso_total-total)/media);
 
-  const fimPrev=new Date(real.inicio);
-  fimPrev.setDate(new Date().getDate()+diasRest);
+  const fimPrev=new Date();
+  fimPrev.setDate(fimPrev.getDate()+diasRest);
 
-  return {
-    inicio: real.inicio,
-    fim: formatISO(new Date(new Date().setDate(new Date().getDate()+diasRest)))
-  };
-}
-
-/* ================= DEPENDÊNCIA + GAP ================= */
-
-function aplicarDependencias(){
-
-  registros.forEach((item,index)=>{
-
-    if(!item.predecessora) return;
-
-    const predIndex=Number(item.predecessora)-1;
-    const pred=registros[predIndex];
-
-    if(!pred) return;
-
-    const gap=Number(item.gap||0);
-
-    const novaIni=new Date(pred.data_fim_plan);
-    novaIni.setDate(novaIni.getDate()+1+gap);
-
-    const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
-
-    const novaFim=new Date(novaIni);
-    novaFim.setDate(novaFim.getDate()+dur);
-
-    item.data_inicio_plan=formatISO(novaIni);
-    item.data_fim_plan=formatISO(novaFim);
-  });
+  return {inicio:real.inicio,fim:formatISO(fimPrev)};
 }
 
 /* ================= RENDER ================= */
 
 function renderizar(){
 
-  aplicarDependencias();
-
   gantt.innerHTML="";
   leftBody.innerHTML="";
 
-  let linhaAtual=0;
-  let idSequencial=1;
+  registros.forEach((item,index)=>{
 
-  registros.forEach(item=>{
+    const idUnico=item.id || index+1;
+    const base=index*3;
 
     const real=calcularReal(item);
     const forecast=calcularForecast(item,real);
 
-    renderLinha(item,linhaAtual,"PLAN",
-      idSequencial,item.data_inicio_plan,item.data_fim_plan,true);
+    renderLinha(item,base,"PLAN",idUnico,item.data_inicio_plan,item.data_fim_plan);
+    renderLinha(item,base+1,"REAL",idUnico,real.inicio,real.fim);
+    renderLinha(item,base+2,"FORECAST",idUnico,forecast.inicio,forecast.fim);
 
-    criarBarra("plan",item.data_inicio_plan,
-      item.data_fim_plan,linhaAtual,item,true);
+    criarBarra("plan",item.data_inicio_plan,item.data_fim_plan,base,item,true);
+    criarBarra("real",real.inicio,real.fim,base+1,item);
+    criarBarra("forecast",forecast.inicio,forecast.fim,base+2,item);
 
-    linhaAtual++;
-
-    renderLinha(item,linhaAtual,"REAL",
-      idSequencial,real.inicio,real.fim,false);
-
-    criarBarra("real",real.inicio,
-      real.fim,linhaAtual,item);
-
-    linhaAtual++;
-
-    renderLinha(item,linhaAtual,"FORECAST",
-      idSequencial,forecast.inicio,forecast.fim,false);
-
-    criarBarra("forecast",forecast.inicio,
-      forecast.fim,linhaAtual,item);
-
-    linhaAtual+=2;
-    idSequencial++;
+    /* linha horizontal cinza */
+    const line=document.createElement("div");
+    line.style.position="absolute";
+    line.style.top=`${(base+3)*LINHA_ALTURA}px`;
+    line.style.left="0px";
+    line.style.width="100%";
+    line.style.height="1px";
+    line.style.background="#f1f5f9";
+    gantt.appendChild(line);
   });
 
-  gantt.style.height=`${linhaAtual*LINHA_BASE}px`;
+  gantt.style.height=`${registros.length*3*LINHA_ALTURA}px`;
 }
 
 /* ================= COLUNA FIXA ================= */
 
-function renderLinha(item,row,tipo,id,inicio,fim,editavel){
+function renderLinha(item,row,tipo,id,inicio,fim){
 
   const dur=(inicio&&fim)?diasEntre(inicio,fim)+1:"";
 
   const div=document.createElement("div");
   div.style.position="absolute";
-  div.style.top=`${row*LINHA_BASE}px`;
-  div.style.height=`${LINHA_BASE}px`;
+  div.style.top=`${row*LINHA_ALTURA}px`;
+  div.style.height=`${LINHA_ALTURA}px`;
   div.style.display="grid";
   div.style.gridTemplateColumns=
-    "40px 60px 1fr 1fr 1fr 90px 90px 60px 60px";
-  div.style.fontSize="10px";
+    "50px 60px 1fr 1fr 1fr 90px 90px 70px 60px 60px";
+  div.style.fontSize="11px";
   div.style.alignItems="center";
   div.style.borderBottom="1px solid #e5e7eb";
 
@@ -279,25 +261,131 @@ function renderLinha(item,row,tipo,id,inicio,fim,editavel){
     <div>${item.obra||""}</div>
     <div>${item.instalacao||""}</div>
     <div>${item.estrutura||""}</div>
-    <div ${editavel?'contenteditable data-field="inicio"':''}>${formatBR(inicio)}</div>
-    <div ${editavel?'contenteditable data-field="fim"':''}>${formatBR(fim)}</div>
-    <div ${editavel?'contenteditable data-field="duracao"':''}>${dur}</div>
-    <div contenteditable data-field="pred">${item.predecessora||""}</div>
-    <div contenteditable data-field="gap">${item.gap||0}</div>
+    <div>${formatDateBR(inicio)}</div>
+    <div>${formatDateBR(fim)}</div>
+    <div>${dur}</div>
+    <div>${item.predecessora||""}</div>
+    <div>${item.sucessora||""}</div>
   `;
-
-  div.querySelectorAll("[data-field]").forEach(el=>{
-    el.onblur=()=>{
-      if(el.dataset.field==="pred")
-        item.predecessora=el.textContent.trim();
-
-      if(el.dataset.field==="gap")
-        item.gap=Number(el.textContent)||0;
-
-      desenharHeader();
-      renderizar();
-    };
-  });
 
   leftBody.appendChild(div);
 }
+
+/* ================= BARRAS ================= */
+
+function criarBarra(tipo,inicio,fim,row,item,drag=false){
+
+  if(!inicio||!fim) return;
+
+  const bar=document.createElement("div");
+  bar.className=`bar ${tipo}`;
+  bar.style.left=`${diasEntre(DATA_BASE,inicio)*PX_POR_DIA}px`;
+  bar.style.top=`${row*LINHA_ALTURA+2}px`;
+  bar.style.width=`${(diasEntre(inicio,fim)+1)*PX_POR_DIA}px`;
+
+  bar.textContent=
+    `${tipo.toUpperCase()} - ${item.obra} - ${item.instalacao} - ${item.estrutura}`;
+
+  if(drag) ativarDrag(bar,item);
+
+  gantt.appendChild(bar);
+}
+
+/* ================= DRAG ================= */
+
+function ativarDrag(bar,item){
+
+  let startX;
+
+  bar.onmousedown=e=>{
+    startX=e.clientX;
+
+    document.onmousemove=ev=>{
+      const dx=ev.clientX-startX;
+      bar.style.left=`${bar.offsetLeft+dx}px`;
+      startX=ev.clientX;
+    };
+
+    document.onmouseup=()=>{
+      document.onmousemove=null;
+      document.onmouseup=null;
+
+      const dias=Math.round(bar.offsetLeft/PX_POR_DIA);
+
+      const novaIni=new Date(DATA_BASE);
+      novaIni.setDate(novaIni.getDate()+dias);
+
+      const dur=diasEntre(item.data_inicio_plan,item.data_fim_plan);
+
+      const novaFim=new Date(novaIni);
+      novaFim.setDate(novaFim.getDate()+dur);
+
+      item.data_inicio_plan=formatISO(novaIni);
+      item.data_fim_plan=formatISO(novaFim);
+
+      renderizar();
+    };
+  };
+}
+
+/* ================= FORNECEDOR ================= */
+
+async function carregarFornecedor(){
+
+  const {data}=await supabase
+    .from("cronograma_estrutura")
+    .select("fornecedor");
+
+  if(!data||!data.length) return;
+
+  fornecedorContainer.innerHTML="";
+
+  const unicos=[...new Set(data.map(d=>d.fornecedor))];
+
+  unicos.forEach((nome,i)=>{
+
+    const btn=document.createElement("button");
+    btn.textContent=nome;
+
+    btn.onclick=()=>{
+      fornecedorAtual=nome;
+      document.querySelectorAll("#fornecedor button")
+        .forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      carregarCronograma();
+    };
+
+    fornecedorContainer.appendChild(btn);
+
+    if(i===0){
+      fornecedorAtual=nome;
+      btn.classList.add("active");
+    }
+  });
+
+  carregarCronograma();
+}
+
+/* ================= LOAD ================= */
+
+async function carregarCronograma(){
+
+  const {data}=await supabase
+    .from("cronograma_estrutura")
+    .select("*")
+    .eq("fornecedor",fornecedorAtual);
+
+  const {data:ap}=await supabase
+    .from("apontamentos")
+    .select("*");
+
+  registros=data||[];
+  apontamentos=ap||[];
+
+  desenharHeader();
+  renderizar();
+}
+
+/* ================= INIT ================= */
+
+carregarFornecedor();

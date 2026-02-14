@@ -250,10 +250,17 @@ function renderLinha(item,row,tipo,id,inicio,fim){
   div.style.height=`${LINHA_ALTURA}px`;
   div.style.display="grid";
   div.style.gridTemplateColumns=
-    "50px 60px 1fr 1fr 1fr 90px 90px 70px 60px 60px";
-  div.style.fontSize="11px";
+    "45px 55px 120px 140px 160px 85px 85px 60px 55px 55px";
+  div.style.fontSize="10px";
   div.style.alignItems="center";
+  div.style.padding="0 4px";
   div.style.borderBottom="1px solid #e5e7eb";
+
+  div.querySelectorAll("div").forEach(cell=>{
+    cell.style.whiteSpace="normal";
+    cell.style.overflow="hidden";
+    cell.style.textOverflow="ellipsis";
+  });
 
   div.innerHTML=`
     <div>${id}</div>

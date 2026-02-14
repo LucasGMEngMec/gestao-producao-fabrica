@@ -268,16 +268,20 @@ function renderLinha(item,row,tipo,id,inicio,fim){
     <div contenteditable data-field="gap">${item.gap||""}</div>
   `;
 
-  div.querySelectorAll("div").forEach(cell=>{
+  div.querySelectorAll("[data-field]").forEach(el => {
+
     el.onblur = () => {
+
       if(el.dataset.field === "pred"){
         item.predecessora = el.textContent.trim();
       }
+
       if(el.dataset.field === "gap"){
         item.gap = Number(el.textContent.trim()) || 0;
       }
-      renderizar ();
-    }
+
+      renderizar();
+    };
   });
 
   leftBody.appendChild(div);

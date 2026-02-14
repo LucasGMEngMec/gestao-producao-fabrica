@@ -195,48 +195,65 @@ function calcularForecast(item, real) {
 
 function aplicarDependencias(){
 
-  registros.forEach(item => {
+  let alterou = true;
 
-    if(!item.predecessora) return;
+  while(alterou){
 
-    const preds = item.predecessora
-      .split(",")
-      .map(p => parseInt(p.trim()))
-      .filter(p => !isNaN(p));
+    alterou = false;
 
-    if(!preds.length) return;
+    registros.forEach(item => {
 
-    let maiorFim = null;
+      if(!item.predecessora) return;
 
-    preds.forEach(idPred => {
+      const preds = item.predecessora
+        .split(",")
+        .map(p => parseInt(p.trim()))
+        .filter(p => !isNaN(p));
 
-      const predItem = registros.find(r => r._id === idPred);
+      if(!preds.length) return;
 
-      if(!predItem || !predItem.data_fim_plan) return;
+      let maiorFim = null;
 
-      const fimPred = new Date(predItem.data_fim_plan);
+      preds.forEach(idPred => {
 
-      if(!maiorFim || fimPred > maiorFim){
-        maiorFim = fimPred;
+        const predItem = registros.find(r => r._id === idPred);
+
+        if(!predItem || !predItem.data_fim_plan) return;
+
+        const fimPred = new Date(predItem.data_fim_plan);
+
+        if(!maiorFim || fimPred > maiorFim){
+          maiorFim = fimPred;
+        }
+      });
+
+      if(!maiorFim) return;
+
+      const gap = Number(item.gap) || 0;
+
+      const novaInicio = new Date(maiorFim);
+      novaInicio.setDate(novaInicio.getDate() + gap);
+
+      const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
+
+      const novaFim = new Date(novaInicio);
+      novaFim.setDate(novaFim.getDate() + dur);
+
+      const inicioAtual = item.data_inicio_plan;
+      const fimAtual = item.data_fim_plan;
+
+      const novoInicioISO = formatISO(novaInicio);
+      const novoFimISO = formatISO(novaFim);
+
+      if(inicioAtual !== novoInicioISO || fimAtual !== novoFimISO){
+        item.data_inicio_plan = novoInicioISO;
+        item.data_fim_plan = novoFimISO;
+        alterou = true;
       }
+
     });
 
-    if(!maiorFim) return;
-
-    const gap = Number(item.gap) || 0;
-
-    const novaDataInicio = new Date(maiorFim);
-    novaDataInicio.setDate(novaDataInicio.getDate() + gap);
-
-    const dur = diasEntre(item.data_inicio_plan, item.data_fim_plan);
-
-    const novaDataFim = new Date(novaDataInicio);
-    novaDataFim.setDate(novaDataFim.getDate() + dur);
-
-    item.data_inicio_plan = formatISO(novaDataInicio);
-    item.data_fim_plan = formatISO(novaDataFim);
-
-  });
+  }
 
 }
 

@@ -170,14 +170,22 @@ function unique(arr) {
   return [...new Set(arr.filter(Boolean))];
 }
 
-function preencherSelect(select, valores, placeholder="Selecione") {
-  select.innerHTML = `<option value="">${placeholder}</option>`;
+function preencherSelect(select, valores, placeholder = "Selecione") {
+  select.innerHTML = "";
+
+  const optPadrao = document.createElement("option");
+  optPadrao.value = "";
+  optPadrao.textContent = placeholder;
+  optPadrao.selected = true;
+  select.appendChild(optPadrao);
+
   unique(valores).forEach(v => {
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
     select.appendChild(opt);
   });
+
   select.disabled = false;
 }
 
@@ -314,31 +322,78 @@ function configurarEventos(tr) {
 ============================ */
 async function validarEFinalizar() {
 
-  if (!data.value || !processo.value) {
-    alert("Preencha Data e Processo.");
+  if (!data.value) {
+    alert("Informe a data.");
+    return;
+  }
+
+  if (!processo.value) {
+    alert("Selecione o processo.");
+    return;
+  }
+
+  const linhas = tbody.querySelectorAll("tr");
+
+  if (linhas.length === 0) {
+    alert("Adicione ao menos uma linha.");
     return;
   }
 
   registrosPendentes = [];
+  const controleDuplicidade = new Set();
 
-  for (const tr of tbody.querySelectorAll("tr")) {
+  for (const tr of linhas) {
 
+    const equipe = tr.querySelector(".equipe").value;
+    const obra = tr.querySelector(".obra").value;
+    const instalacao = tr.querySelector(".instalacao").value;
+    const estrutura = tr.querySelector(".estrutura").value;
+    const conjunto = tr.querySelector(".conjunto").value;
+    const descricao = tr.querySelector(".descricao").value;
     const quantidade = Number(tr.querySelector(".quantidade").value);
+
+    // ===== VALIDAÇÃO CAMPOS OBRIGATÓRIOS =====
+    if (
+      equipe.trim() === "" ||
+      obra.trim() === "" ||
+      instalacao.trim() === "" ||
+      estrutura.trim() === "" ||
+      conjunto.trim() === ""
+    ) {
+      alert("Todos os campos da linha devem ser preenchidos.");
+      return;
+    }
+
+
+    if (!descricao) {
+      alert("Descrição não carregada. Verifique o grupo.");
+      return;
+    }
 
     if (!quantidade || quantidade <= 0) {
       alert("Quantidade inválida.");
       return;
     }
 
+    // ===== CONTROLE DE DUPLICIDADE =====
+    const chave = `${obra}|${instalacao}|${estrutura}|${conjunto}|${processo.value}`;
+
+    if (controleDuplicidade.has(chave)) {
+      alert("Existe grupo duplicado na mesma gravação.");
+      return;
+    }
+
+    controleDuplicidade.add(chave);
+
     registrosPendentes.push({
       data: data.value,
       processo: processo.value,
-      equipe: tr.querySelector(".equipe").value,
-      obra: tr.querySelector(".obra").value,
-      instalacao: tr.querySelector(".instalacao").value,
-      estrutura: tr.querySelector(".estrutura").value,
-      conjunto: tr.querySelector(".conjunto").value,
-      descricao: tr.querySelector(".descricao").value,
+      equipe,
+      obra,
+      instalacao,
+      estrutura,
+      conjunto,
+      descricao,
       quantidade,
       fabrica: fabrica.value,
       fornecedor: fornecedor.value

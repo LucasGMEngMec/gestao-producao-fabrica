@@ -386,10 +386,16 @@ async function validarEFinalizar() {
     }
 
     // ===== CONTROLE DE DUPLICIDADE =====
-    const chave = `${obra}|${instalacao}|${estrutura}|${conjunto}|${processo.value}`;
+    const chave = [
+      obra.trim().toUpperCase(),
+      instalacao.trim().toUpperCase(),
+      estrutura.trim().toUpperCase(),
+      conjunto.trim().toUpperCase(),
+      processo.value.trim().toUpperCase()
+    ].join("|")
 
     if (controleDuplicidade.has(chave)) {
-      alert("Existe grupo duplicado na mesma gravação.");
+      alert("Grupo duplicado na mesma gravação.");
       return;
     }
 

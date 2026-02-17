@@ -332,6 +332,16 @@ async function validarEFinalizar() {
     return;
   }
 
+  if (fabrica.value.trim() === "") {
+    alert("Informe a fábrica.");
+    return;
+  }
+
+  if (fornecedor.value.trim() === "") {
+    alert("Informe o fornecedor.");
+    return;
+  }
+
   const linhas = tbody.querySelectorAll("tr");
 
   if (linhas.length === 0) {

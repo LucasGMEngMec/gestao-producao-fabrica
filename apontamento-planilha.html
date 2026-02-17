@@ -1,0 +1,555 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/apontamento-planilha.html b/apontamento-planilha.html
+index 043d7988b1f5f4fcf7dbe43479f2052bbaee444b..a1a6a008378e7c7b59c49e2faed1bd1cfe66bcc3 100644
+--- a/apontamento-planilha.html
++++ b/apontamento-planilha.html
+@@ -10,97 +10,123 @@ body { font-family: Arial, sans-serif; margin: 10px; background: #f4f6f8; }
+ h2 { text-align: center; }
+ 
+ .topo, .tabela {
+   background: #fff;
+   padding: 12px;
+   border-radius: 6px;
+   margin-bottom: 12px;
+   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+ }
+ 
+ label { font-size: 13px; font-weight: bold; }
+ 
+ .linha-topo {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+   gap: 10px;
+ }
+ 
+ input, select {
+   width: 100%;
+   padding: 6px;
+   font-size: 13px;
+   box-sizing: border-box;
+ }
+ 
++.tabela-scroll {
++  overflow-x: auto;
++}
++
+ table {
+   width: 100%;
+   border-collapse: collapse;
+   font-size: 13px;
+ }
+ 
+ th, td {
+   border: 1px solid #ccc;
+   padding: 6px;
+ }
+ 
+ th { background: #eee; white-space: nowrap; }
+ 
+ td input {
+   width: 100%;
+   border: none;
+   outline: none;
+   background: transparent;
+ }
+ 
+ .acoes {
+   margin-top: 10px;
+   display: flex;
+   gap: 10px;
+ }
+ 
+ .acoes button {
+   padding: 10px;
+   flex: 1;
+   font-size: 14px;
+   border: none;
+   border-radius: 4px;
+   cursor: pointer;
+ }
+ 
++button:disabled {
++  opacity: 0.7;
++  cursor: not-allowed;
++}
++
+ .add { background: #0275d8; color: white; }
+ .finalizar { background: #2e7d32; color: white; }
+ 
+ .remover {
+   background: #d9534f;
+   color: white;
+   border: none;
+   padding: 4px 8px;
+   cursor: pointer;
+   border-radius: 4px;
+ }
+ 
++.status {
++  margin-top: 10px;
++  padding: 8px;
++  border-radius: 4px;
++  font-size: 13px;
++  display: none;
++}
++
++.status.info { background: #e3f2fd; color: #0d47a1; display: block; }
++.status.erro { background: #ffebee; color: #b71c1c; display: block; }
++.status.sucesso { background: #e8f5e9; color: #1b5e20; display: block; }
++
++.input-invalido {
++  outline: 1px solid #d9534f;
++  background: #fff7f7;
++}
++
+ /* ===== MODAL ===== */
+ .modal {
+   position: fixed;
+   inset: 0;
+   background: rgba(0,0,0,0.5);
+   display: none;
+   align-items: center;
+   justify-content: center;
+   z-index: 9999;
+ }
+ 
+ .modal-conteudo {
+   background: #fff;
+   padding: 15px;
+   max-width: 95%;
+   max-height: 90%;
+   overflow: auto;
+   border-radius: 6px;
+ }
+ </style>
+ </head>
+ 
+ <body>
+ 
+ <h2>Apontamento de Produção</h2>
+@@ -114,293 +140,381 @@ td input {
+       <label>Processo</label>
+       <select id="processo">
+         <option value="">Selecione</option>
+         <option>Montagem</option>
+         <option>Soldagem</option>
+         <option>Acabamento</option>
+         <option>Pintura</option>
+         <option>Entrega</option>
+       </select>
+     </div>
+ 
+     <div><label>Fábrica</label><input id="fabrica"></div>
+     <div><label>Fornecedor</label><input id="fornecedor"></div>
+   </div>
+ </div>
+ 
+ <!-- DATALISTS (AUTOCOMPLETE) -->
+ <datalist id="listaEquipes"></datalist>
+ <datalist id="listaObras"></datalist>
+ <datalist id="listaInstalacoes"></datalist>
+ <datalist id="listaEstruturas"></datalist>
+ <datalist id="listaConjuntos"></datalist>
+ 
+ <!-- TABELA -->
+ <div class="tabela">
++<div class="tabela-scroll">
+ <table id="grid">
+   <thead>
+     <tr>
+       <th>Equipe</th>
+       <th>Obra</th>
+       <th>Instalação</th>
+       <th>Estrutura</th>
+       <th>Conjunto</th>
+       <th>Descrição</th>
+       <th>Qtde</th>
+       <th>Já Produzido</th>
+       <th>Ação</th>
+     </tr>
+   </thead>
+   <tbody></tbody>
+ </table>
++</div>
++
++<div class="status" id="statusMsg" role="status" aria-live="polite"></div>
+ 
+ <div class="acoes">
+   <button class="add" onclick="addLinha()">+ Linha</button>
+   <button class="finalizar" onclick="validarEFinalizar()">Finalizar</button>
+ </div>
+ </div>
+ 
+ <!-- MODAL RESUMO -->
+ <div class="modal" id="modalResumo">
+   <div class="modal-conteudo">
+     <h3>Resumo do Apontamento</h3>
+     <div id="conteudoResumo"></div>
+ 
+     <div class="acoes">
+       <button class="finalizar" onclick="confirmarSalvar()">Salvar</button>
+       <button class="remover" onclick="fecharResumo()">Cancelar</button>
+     </div>
+   </div>
+ </div>
+ 
+ <script type="module">
+ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+ 
+ const supabase = createClient(
+   "https://dklmejmlovtcadlicnhu.supabase.co",
+   "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+ );
+ 
+ const tbody = document.querySelector("#grid tbody");
++const dataInput = document.getElementById("data");
++const processoInput = document.getElementById("processo");
++const fabricaInput = document.getElementById("fabrica");
++const fornecedorInput = document.getElementById("fornecedor");
++const statusMsg = document.getElementById("statusMsg");
++const btnFinalizar = document.querySelector(".acoes .finalizar");
+ let registrosPendentes = [];
+ 
++function mostrarStatus(mensagem, tipo = "info") {
++  statusMsg.textContent = mensagem;
++  statusMsg.className = `status ${tipo}`;
++}
++
++function limparStatus() {
++  statusMsg.textContent = "";
++  statusMsg.className = "status";
++}
++
+ /* ===============================
+    AUTOCOMPLETE
+ =============================== */
+ async function carregarListas() {
+-  const { data: grupos } = await supabase
+-    .from("grupos_producao")
+-    .select("obra, instalacao, estrutura, conjunto");
++  try {
++    mostrarStatus("Carregando listas de apoio...");
++
++    const { data: grupos, error: erroGrupos } = await supabase
++      .from("grupos_producao")
++      .select("obra, instalacao, estrutura, conjunto");
++
++    if (erroGrupos) throw erroGrupos;
++
++    preencher("listaObras", grupos.map(g => g.obra));
++    preencher("listaInstalacoes", grupos.map(g => g.instalacao));
++    preencher("listaEstruturas", grupos.map(g => g.estrutura));
++    preencher("listaConjuntos", grupos.map(g => g.conjunto));
+ 
+-  preencher("listaObras", grupos.map(g => g.obra));
+-  preencher("listaInstalacoes", grupos.map(g => g.instalacao));
+-  preencher("listaEstruturas", grupos.map(g => g.estrutura));
+-  preencher("listaConjuntos", grupos.map(g => g.conjunto));
++    const { data: equipes, error: erroEquipes } = await supabase
++      .from("equipes")
++      .select("equipe");
+ 
+-  const { data: equipes } = await supabase
+-    .from("equipes")
+-    .select("equipe");
++    if (erroEquipes) throw erroEquipes;
+ 
+-  preencher("listaEquipes", equipes.map(e => e.equipe));
++    preencher("listaEquipes", equipes.map(e => e.equipe));
++    mostrarStatus("Listas carregadas com sucesso.", "sucesso");
++  } catch (error) {
++    mostrarStatus(`Falha ao carregar listas: ${error.message}`, "erro");
++  }
+ }
+ 
+ function preencher(id, valores) {
+   const lista = document.getElementById(id);
+   lista.innerHTML = "";
+   [...new Set(valores.filter(v => v))].forEach(v => {
+     const opt = document.createElement("option");
+     opt.value = v;
+     lista.appendChild(opt);
+   });
+ }
+ 
+ /* ===============================
+    VALIDAR GRUPO + DESCRIÇÃO
+ =============================== */
+ async function validarGrupo(tr) {
+   const obra = tr.querySelector(".obra").value.trim();
+   const instalacao = tr.querySelector(".instalacao").value.trim();
+   const estrutura = tr.querySelector(".estrutura").value.trim();
+   const conjunto = tr.querySelector(".conjunto").value.trim();
+ 
+   if (!obra || !instalacao || !estrutura || !conjunto) {
+     tr.querySelector(".descricao").value = "";
+     return false;
+   }
+ 
+-  const { data } = await supabase
++  const { data, error } = await supabase
+     .from("grupos_producao")
+     .select("descricao")
+     .ilike("obra", obra)
+     .ilike("instalacao", instalacao)
+     .ilike("estrutura", estrutura)
+     .ilike("conjunto", conjunto)
+     .limit(1);
+ 
+-  if (!data || !data.length) {
++  if (error || !data || !data.length) {
+     tr.querySelector(".descricao").value = "Grupo não cadastrado";
+     return false;
+   }
+ 
+   tr.querySelector(".descricao").value = data[0].descricao;
+   return true;
+ }
+ 
+ /* ===============================
+    JÁ PRODUZIDO
+ =============================== */
+ async function calcularJaProduzido(tr) {
+-  const processo = document.getElementById("processo").value;
++  const processo = processoInput.value;
+   const obra = tr.querySelector(".obra").value;
+   const instalacao = tr.querySelector(".instalacao").value;
+   const estrutura = tr.querySelector(".estrutura").value;
+   const conjunto = tr.querySelector(".conjunto").value;
+ 
+   if (!processo || !obra || !instalacao || !estrutura || !conjunto) {
+     tr.querySelector(".produzido").value = 0;
+     return;
+   }
+ 
+   const { data } = await supabase
+     .from("apontamentos")
+     .select("quantidade")
+     .eq("processo", processo)
+     .eq("obra", obra)
+     .eq("instalacao", instalacao)
+     .eq("estrutura", estrutura)
+     .eq("conjunto", conjunto);
+ 
+   const total = data && data.length
+     ? data.reduce((s, r) => s + Number(r.quantidade || 0), 0)
+     : 0;
+ 
+   tr.querySelector(".produzido").value = total;
+ }
+ 
+ /* ===============================
+    LINHA
+ =============================== */
+ function addLinha() {
+   const tr = document.createElement("tr");
+   tr.innerHTML = `
+     <td><input class="equipe" list="listaEquipes"></td>
+     <td><input class="obra" list="listaObras"></td>
+     <td><input class="instalacao" list="listaInstalacoes"></td>
+     <td><input class="estrutura" list="listaEstruturas"></td>
+     <td><input class="conjunto" list="listaConjuntos"></td>
+     <td><input class="descricao" disabled></td>
+     <td><input type="number" class="quantidade" min="1"></td>
+     <td><input class="produzido" disabled value="0"></td>
+-    <td><button class="remover" onclick="this.closest('tr').remove()">🗑️</button></td>
++    <td><button class="remover" type="button" onclick="removerLinha(this)">🗑️</button></td>
+   `;
+ 
+-  [".obra",".instalacao",".estrutura",".conjunto"].forEach(sel => {
++  tr.querySelectorAll("input").forEach(input => {
++    input.addEventListener("input", () => input.classList.remove("input-invalido"));
++  });
++
++  [".obra", ".instalacao", ".estrutura", ".conjunto"].forEach(sel => {
+     tr.querySelector(sel).addEventListener("blur", async () => {
+       const ok = await validarGrupo(tr);
+       if (ok) await calcularJaProduzido(tr);
+     });
+   });
+ 
+   tbody.appendChild(tr);
+ }
+ 
++function removerLinha(botao) {
++  botao.closest("tr").remove();
++  if (!tbody.querySelector("tr")) addLinha();
++}
++
++function validarLinha(tr, index) {
++  const linha = index + 1;
++  const campos = {
++    equipe: tr.querySelector(".equipe"),
++    obra: tr.querySelector(".obra"),
++    instalacao: tr.querySelector(".instalacao"),
++    estrutura: tr.querySelector(".estrutura"),
++    conjunto: tr.querySelector(".conjunto"),
++    quantidade: tr.querySelector(".quantidade"),
++    descricao: tr.querySelector(".descricao")
++  };
++
++  Object.values(campos).forEach(campo => campo.classList.remove("input-invalido"));
++
++  for (const [nome, campo] of Object.entries(campos)) {
++    if (nome === "descricao") continue;
++    if (!campo.value.trim()) {
++      campo.classList.add("input-invalido");
++      throw new Error(`Linha ${linha}: preencha o campo ${nome}.`);
++    }
++  }
++
++  if (Number(campos.quantidade.value) <= 0) {
++    campos.quantidade.classList.add("input-invalido");
++    throw new Error(`Linha ${linha}: a quantidade deve ser maior que zero.`);
++  }
++
++  if (!campos.descricao.value || campos.descricao.value === "Grupo não cadastrado") {
++    [campos.obra, campos.instalacao, campos.estrutura, campos.conjunto].forEach(c => c.classList.add("input-invalido"));
++    throw new Error(`Linha ${linha}: grupo inválido ou não cadastrado.`);
++  }
++}
++
+ /* ===============================
+    FINALIZAR
+ =============================== */
+ function validarEFinalizar() {
+-  if (!data.value || !processo.value) {
+-    alert("Preencha Data e Processo.");
++  limparStatus();
++
++  if (!dataInput.value || !processoInput.value) {
++    mostrarStatus("Preencha Data e Processo.", "erro");
+     return;
+   }
+ 
+-  registrosPendentes = [];
+-  for (const tr of tbody.querySelectorAll("tr")) {
+-    if (tr.querySelector(".descricao").value === "Grupo não cadastrado") {
+-      alert("Existe grupo não cadastrado.");
+-      return;
+-    }
++  const linhas = [...tbody.querySelectorAll("tr")];
++  if (!linhas.length) {
++    mostrarStatus("Adicione ao menos uma linha para finalizar.", "erro");
++    return;
++  }
+ 
+-    registrosPendentes.push({
+-      data: data.value,
+-      processo: processo.value,
+-      equipe: tr.querySelector(".equipe").value,
+-      obra: tr.querySelector(".obra").value,
+-      instalacao: tr.querySelector(".instalacao").value,
+-      estrutura: tr.querySelector(".estrutura").value,
+-      conjunto: tr.querySelector(".conjunto").value,
+-      descricao: tr.querySelector(".descricao").value,
+-      quantidade: tr.querySelector(".quantidade").value,
+-      fabrica: fabrica.value,
+-      fornecedor: fornecedor.value
++  try {
++    registrosPendentes = [];
++
++    linhas.forEach((tr, idx) => {
++      validarLinha(tr, idx);
++
++      registrosPendentes.push({
++        data: dataInput.value,
++        processo: processoInput.value,
++        equipe: tr.querySelector(".equipe").value,
++        obra: tr.querySelector(".obra").value,
++        instalacao: tr.querySelector(".instalacao").value,
++        estrutura: tr.querySelector(".estrutura").value,
++        conjunto: tr.querySelector(".conjunto").value,
++        descricao: tr.querySelector(".descricao").value,
++        quantidade: Number(tr.querySelector(".quantidade").value),
++        fabrica: fabricaInput.value,
++        fornecedor: fornecedorInput.value
++      });
+     });
+-  }
+ 
+-  abrirResumo();
++    abrirResumo();
++  } catch (error) {
++    mostrarStatus(error.message, "erro");
++  }
+ }
+ 
+ /* ===============================
+    RESUMO
+ =============================== */
+ function abrirResumo() {
+   let html = `<table><thead><tr>
+     <th>Equipe</th><th>Obra</th><th>Instalação</th>
+     <th>Estrutura</th><th>Conjunto</th>
+     <th>Descrição</th><th>Qtd</th>
+   </tr></thead><tbody>`;
+ 
+   registrosPendentes.forEach(r => {
+     html += `<tr>
+       <td>${r.equipe}</td>
+       <td>${r.obra}</td>
+       <td>${r.instalacao}</td>
+       <td>${r.estrutura}</td>
+       <td>${r.conjunto}</td>
+       <td>${r.descricao}</td>
+       <td>${r.quantidade}</td>
+     </tr>`;
+   });
+ 
+   html += "</tbody></table>";
+ 
+   document.getElementById("conteudoResumo").innerHTML = html;
+   document.getElementById("modalResumo").style.display = "flex";
+ }
+ 
+ function fecharResumo() {
+   document.getElementById("modalResumo").style.display = "none";
+ }
+ 
+ async function confirmarSalvar() {
++  btnFinalizar.disabled = true;
++
+   const { error } = await supabase
+     .from("apontamentos")
+     .insert(registrosPendentes);
+ 
++  btnFinalizar.disabled = false;
++
+   if (error) {
+-    alert("Erro ao salvar: " + error.message);
++    mostrarStatus(`Erro ao salvar: ${error.message}`, "erro");
+     return;
+   }
+ 
+-  alert("Apontamento salvo com sucesso!");
++  mostrarStatus("Apontamento salvo com sucesso!", "sucesso");
+   fecharResumo();
+   tbody.innerHTML = "";
+   addLinha();
+ }
+ 
+ window.addLinha = addLinha;
+ window.validarEFinalizar = validarEFinalizar;
+ window.confirmarSalvar = confirmarSalvar;
+ window.fecharResumo = fecharResumo;
++window.removerLinha = removerLinha;
+ 
+-document.getElementById("processo").addEventListener("change", async () => {
++processoInput.addEventListener("change", async () => {
+   const linhas = tbody.querySelectorAll("tr");
+   for (const tr of linhas) {
+     await calcularJaProduzido(tr);
+   }
+ });
+ 
+ /* INICIAL */
+ carregarListas();
+ addLinha();
+ </script>
+ 
+ </body>
+ </html>
+ 
+EOF
+)

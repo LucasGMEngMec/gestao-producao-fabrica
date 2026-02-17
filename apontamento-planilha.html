@@ -17,18 +17,18 @@ h2 { text-align: center; }
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
-label { font-size: 13px; font-weight: bold; }
-
 .linha-topo {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
+label { font-size: 13px; font-weight: bold; }
+
 input, select {
   width: 100%;
-  padding: 6px;
-  font-size: 13px;
+  padding: 10px;
+  font-size: 15px;
   box-sizing: border-box;
 }
 
@@ -45,13 +45,6 @@ th, td {
 
 th { background: #eee; white-space: nowrap; }
 
-td input {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-}
-
 .acoes {
   margin-top: 10px;
   display: flex;
@@ -59,9 +52,9 @@ td input {
 }
 
 .acoes button {
-  padding: 10px;
+  padding: 12px;
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -69,34 +62,43 @@ td input {
 
 .add { background: #0275d8; color: white; }
 .finalizar { background: #2e7d32; color: white; }
-
 .remover {
   background: #d9534f;
   color: white;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   cursor: pointer;
   border-radius: 4px;
 }
 
-/* ===== MODAL ===== */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
+/* RESPONSIVO MOBILE */
+@media (max-width: 768px) {
 
-.modal-conteudo {
-  background: #fff;
-  padding: 15px;
-  max-width: 95%;
-  max-height: 90%;
-  overflow: auto;
-  border-radius: 6px;
+  table thead { display: none; }
+
+  table, tbody, tr, td {
+    display: block;
+    width: 100%;
+  }
+
+  tr {
+    margin-bottom: 12px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 6px;
+  }
+
+  td {
+    border: none;
+    margin-bottom: 8px;
+  }
+
+  .acoes {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 10px;
+  }
 }
 </style>
 </head>
@@ -105,7 +107,6 @@ td input {
 
 <h2>Apontamento de Produção</h2>
 
-<!-- TOPO -->
 <div class="topo">
   <div class="linha-topo">
     <div><label>Data</label><input type="date" id="data"></div>
@@ -127,49 +128,28 @@ td input {
   </div>
 </div>
 
-<!-- DATALISTS (AUTOCOMPLETE) -->
-<datalist id="listaEquipes"></datalist>
-<datalist id="listaObras"></datalist>
-<datalist id="listaInstalacoes"></datalist>
-<datalist id="listaEstruturas"></datalist>
-<datalist id="listaConjuntos"></datalist>
-
-<!-- TABELA -->
 <div class="tabela">
 <table id="grid">
-  <thead>
-    <tr>
-      <th>Equipe</th>
-      <th>Obra</th>
-      <th>Instalação</th>
-      <th>Estrutura</th>
-      <th>Conjunto</th>
-      <th>Descrição</th>
-      <th>Qtde</th>
-      <th>Já Produzido</th>
-      <th>Ação</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
+<thead>
+<tr>
+<th>Equipe</th>
+<th>Obra</th>
+<th>Instalação</th>
+<th>Estrutura</th>
+<th>Conjunto</th>
+<th>Descrição</th>
+<th>Qtde</th>
+<th>Já Produzido</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody></tbody>
 </table>
 
 <div class="acoes">
-  <button class="add" onclick="addLinha()">+ Linha</button>
-  <button class="finalizar" onclick="validarEFinalizar()">Finalizar</button>
+<button class="add" onclick="addLinha()">+ Linha</button>
+<button class="finalizar" onclick="validarEFinalizar()">Finalizar</button>
 </div>
-</div>
-
-<!-- MODAL RESUMO -->
-<div class="modal" id="modalResumo">
-  <div class="modal-conteudo">
-    <h3>Resumo do Apontamento</h3>
-    <div id="conteudoResumo"></div>
-
-    <div class="acoes">
-      <button class="finalizar" onclick="confirmarSalvar()">Salvar</button>
-      <button class="remover" onclick="fecharResumo()">Cancelar</button>
-    </div>
-  </div>
 </div>
 
 <script type="module">
@@ -183,139 +163,170 @@ const supabase = createClient(
 const tbody = document.querySelector("#grid tbody");
 let registrosPendentes = [];
 
-/* ===============================
-   AUTOCOMPLETE
-=============================== */
-async function carregarListas() {
-  const { data: grupos } = await supabase
-    .from("grupos_producao")
-    .select("obra, instalacao, estrutura, conjunto");
-
-  preencher("listaObras", grupos.map(g => g.obra));
-  preencher("listaInstalacoes", grupos.map(g => g.instalacao));
-  preencher("listaEstruturas", grupos.map(g => g.estrutura));
-  preencher("listaConjuntos", grupos.map(g => g.conjunto));
-
-  const { data: equipes } = await supabase
-    .from("equipes")
-    .select("equipe");
-
-  preencher("listaEquipes", equipes.map(e => e.equipe));
+/* ============================
+   UTIL
+============================ */
+function unique(arr) {
+  return [...new Set(arr.filter(Boolean))];
 }
 
-function preencher(id, valores) {
-  const lista = document.getElementById(id);
-  lista.innerHTML = "";
-  [...new Set(valores.filter(v => v))].forEach(v => {
+function preencherSelect(select, valores, placeholder="Selecione") {
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+  unique(valores).forEach(v => {
     const opt = document.createElement("option");
     opt.value = v;
-    lista.appendChild(opt);
+    opt.textContent = v;
+    select.appendChild(opt);
   });
+  select.disabled = false;
 }
 
-/* ===============================
-   VALIDAR GRUPO + DESCRIÇÃO
-=============================== */
-async function validarGrupo(tr) {
-  const obra = tr.querySelector(".obra").value.trim();
-  const instalacao = tr.querySelector(".instalacao").value.trim();
-  const estrutura = tr.querySelector(".estrutura").value.trim();
-  const conjunto = tr.querySelector(".conjunto").value.trim();
+function resetSelect(select) {
+  select.innerHTML = `<option value="">Selecione</option>`;
+  select.disabled = true;
+}
 
-  if (!obra || !instalacao || !estrutura || !conjunto) {
-    tr.querySelector(".descricao").value = "";
-    return false;
-  }
+/* ============================
+   CARREGAR EQUIPES + OBRAS
+============================ */
+async function carregarBase(tr) {
 
-  const { data } = await supabase
+  const selEquipe = tr.querySelector(".equipe");
+  const selObra = tr.querySelector(".obra");
+
+  const { data: equipes } = await supabase
+    .from("equipes_producao")
+    .select("nome");
+
+  preencherSelect(selEquipe, equipes.map(e => e.nome));
+
+  const { data: obras } = await supabase
     .from("grupos_producao")
-    .select("descricao")
-    .ilike("obra", obra)
-    .ilike("instalacao", instalacao)
-    .ilike("estrutura", estrutura)
-    .ilike("conjunto", conjunto)
-    .limit(1);
+    .select("obra");
 
-  if (!data || !data.length) {
-    tr.querySelector(".descricao").value = "Grupo não cadastrado";
-    return false;
-  }
-
-  tr.querySelector(".descricao").value = data[0].descricao;
-  return true;
+  preencherSelect(selObra, obras.map(o => o.obra));
 }
 
-/* ===============================
-   JÁ PRODUZIDO
-=============================== */
-async function calcularJaProduzido(tr) {
-  const processo = document.getElementById("processo").value;
-  const obra = tr.querySelector(".obra").value;
-  const instalacao = tr.querySelector(".instalacao").value;
-  const estrutura = tr.querySelector(".estrutura").value;
-  const conjunto = tr.querySelector(".conjunto").value;
-
-  if (!processo || !obra || !instalacao || !estrutura || !conjunto) {
-    tr.querySelector(".produzido").value = 0;
-    return;
-  }
-
-  const { data } = await supabase
-    .from("apontamentos")
-    .select("quantidade")
-    .eq("processo", processo)
-    .eq("obra", obra)
-    .eq("instalacao", instalacao)
-    .eq("estrutura", estrutura)
-    .eq("conjunto", conjunto);
-
-  const total = data && data.length
-    ? data.reduce((s, r) => s + Number(r.quantidade || 0), 0)
-    : 0;
-
-  tr.querySelector(".produzido").value = total;
-}
-
-/* ===============================
+/* ============================
    LINHA
-=============================== */
+============================ */
 function addLinha() {
+
   const tr = document.createElement("tr");
   tr.innerHTML = `
-    <td><input class="equipe" list="listaEquipes"></td>
-    <td><input class="obra" list="listaObras"></td>
-    <td><input class="instalacao" list="listaInstalacoes"></td>
-    <td><input class="estrutura" list="listaEstruturas"></td>
-    <td><input class="conjunto" list="listaConjuntos"></td>
+    <td><select class="equipe"></select></td>
+    <td><select class="obra"></select></td>
+    <td><select class="instalacao" disabled></select></td>
+    <td><select class="estrutura" disabled></select></td>
+    <td><select class="conjunto" disabled></select></td>
     <td><input class="descricao" disabled></td>
     <td><input type="number" class="quantidade" min="1"></td>
     <td><input class="produzido" disabled value="0"></td>
     <td><button class="remover" onclick="this.closest('tr').remove()">🗑️</button></td>
   `;
 
-  [".obra",".instalacao",".estrutura",".conjunto"].forEach(sel => {
-    tr.querySelector(sel).addEventListener("blur", async () => {
-      const ok = await validarGrupo(tr);
-      if (ok) await calcularJaProduzido(tr);
-    });
-  });
-
   tbody.appendChild(tr);
+  configurarEventos(tr);
+  carregarBase(tr);
 }
 
-/* ===============================
+/* ============================
+   EVENTOS CASCADE
+============================ */
+function configurarEventos(tr) {
+
+  const obra = tr.querySelector(".obra");
+  const instalacao = tr.querySelector(".instalacao");
+  const estrutura = tr.querySelector(".estrutura");
+  const conjunto = tr.querySelector(".conjunto");
+  const descricao = tr.querySelector(".descricao");
+
+  obra.addEventListener("change", async () => {
+
+    resetSelect(instalacao);
+    resetSelect(estrutura);
+    resetSelect(conjunto);
+    descricao.value = "";
+
+    if (!obra.value) return;
+
+    const { data } = await supabase
+      .from("grupos_producao")
+      .select("instalacao")
+      .eq("obra", obra.value);
+
+    preencherSelect(instalacao, data.map(d => d.instalacao));
+  });
+
+  instalacao.addEventListener("change", async () => {
+
+    resetSelect(estrutura);
+    resetSelect(conjunto);
+    descricao.value = "";
+
+    if (!instalacao.value) return;
+
+    const { data } = await supabase
+      .from("grupos_producao")
+      .select("estrutura")
+      .eq("obra", obra.value)
+      .eq("instalacao", instalacao.value);
+
+    preencherSelect(estrutura, data.map(d => d.estrutura));
+  });
+
+  estrutura.addEventListener("change", async () => {
+
+    resetSelect(conjunto);
+    descricao.value = "";
+
+    if (!estrutura.value) return;
+
+    const { data } = await supabase
+      .from("grupos_producao")
+      .select("conjunto")
+      .eq("obra", obra.value)
+      .eq("instalacao", instalacao.value)
+      .eq("estrutura", estrutura.value);
+
+    preencherSelect(conjunto, data.map(d => d.conjunto));
+  });
+
+  conjunto.addEventListener("change", async () => {
+
+    if (!conjunto.value) return;
+
+    const { data } = await supabase
+      .from("grupos_producao")
+      .select("descricao")
+      .eq("obra", obra.value)
+      .eq("instalacao", instalacao.value)
+      .eq("estrutura", estrutura.value)
+      .eq("conjunto", conjunto.value)
+      .limit(1);
+
+    if (data?.length) descricao.value = data[0].descricao;
+  });
+}
+
+/* ============================
    FINALIZAR
-=============================== */
-function validarEFinalizar() {
+============================ */
+async function validarEFinalizar() {
+
   if (!data.value || !processo.value) {
     alert("Preencha Data e Processo.");
     return;
   }
 
   registrosPendentes = [];
+
   for (const tr of tbody.querySelectorAll("tr")) {
-    if (tr.querySelector(".descricao").value === "Grupo não cadastrado") {
-      alert("Existe grupo não cadastrado.");
+
+    const quantidade = Number(tr.querySelector(".quantidade").value);
+
+    if (!quantidade || quantidade <= 0) {
+      alert("Quantidade inválida.");
       return;
     }
 
@@ -328,48 +339,12 @@ function validarEFinalizar() {
       estrutura: tr.querySelector(".estrutura").value,
       conjunto: tr.querySelector(".conjunto").value,
       descricao: tr.querySelector(".descricao").value,
-      quantidade: tr.querySelector(".quantidade").value,
+      quantidade,
       fabrica: fabrica.value,
       fornecedor: fornecedor.value
     });
   }
 
-  abrirResumo();
-}
-
-/* ===============================
-   RESUMO
-=============================== */
-function abrirResumo() {
-  let html = `<table><thead><tr>
-    <th>Equipe</th><th>Obra</th><th>Instalação</th>
-    <th>Estrutura</th><th>Conjunto</th>
-    <th>Descrição</th><th>Qtd</th>
-  </tr></thead><tbody>`;
-
-  registrosPendentes.forEach(r => {
-    html += `<tr>
-      <td>${r.equipe}</td>
-      <td>${r.obra}</td>
-      <td>${r.instalacao}</td>
-      <td>${r.estrutura}</td>
-      <td>${r.conjunto}</td>
-      <td>${r.descricao}</td>
-      <td>${r.quantidade}</td>
-    </tr>`;
-  });
-
-  html += "</tbody></table>";
-
-  document.getElementById("conteudoResumo").innerHTML = html;
-  document.getElementById("modalResumo").style.display = "flex";
-}
-
-function fecharResumo() {
-  document.getElementById("modalResumo").style.display = "none";
-}
-
-async function confirmarSalvar() {
   const { error } = await supabase
     .from("apontamentos")
     .insert(registrosPendentes);
@@ -380,25 +355,13 @@ async function confirmarSalvar() {
   }
 
   alert("Apontamento salvo com sucesso!");
-  fecharResumo();
   tbody.innerHTML = "";
   addLinha();
 }
 
 window.addLinha = addLinha;
 window.validarEFinalizar = validarEFinalizar;
-window.confirmarSalvar = confirmarSalvar;
-window.fecharResumo = fecharResumo;
 
-document.getElementById("processo").addEventListener("change", async () => {
-  const linhas = tbody.querySelectorAll("tr");
-  for (const tr of linhas) {
-    await calcularJaProduzido(tr);
-  }
-});
-
-/* INICIAL */
-carregarListas();
 addLinha();
 </script>
 

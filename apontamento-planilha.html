@@ -420,6 +420,7 @@ async function validarEFinalizar() {
   // ===== VERIFICA DUPLICIDADE NO BANCO =====
 
   let linhasDuplicadas = [];
+  let registroBancoDuplicado = null;
 
   for (const registro of registrosPendentes) {
 
@@ -440,14 +441,11 @@ async function validarEFinalizar() {
       alert("Erro ao verificar duplicidade no banco.");
       return;
     }
-    
-    let linhasDuplicadas = [];
-    let existenteRigistro = null;
 
     if (existente && existente.length > 0) {
       linhasDuplicadas.push(registro._tr);
-      var existenteRegistro = existente[0];
-    } 
+      registroBancoDuplicado = existente[0];
+    }
   }
 
   // Remove destaque antigo
@@ -464,22 +462,19 @@ async function validarEFinalizar() {
       tr.style.border = "2px solid red";
     });
 
-    // Monta mensagem detalhada
-    const registroBanco = linhasDuplicadas.length > 0 ? existente?.[0] : null;
-
     let mensagem = "Duplicidade de lançamento no banco de dados!\n\n";
 
-    if (registroBanco) {
+    if (registroBancoDuplicado) {
       mensagem += "Registro já existente:\n\n";
-      mensagem += `Data: ${registroBanco.data}\n`;
-      mensagem += `Processo: ${registroBanco.processo}\n`;
-      mensagem += `Fábrica: ${registroBanco.fabrica}\n`;
-      mensagem += `Fornecedor: ${registroBanco.fornecedor}\n`;
-      mensagem += `Obra: ${registroBanco.obra}\n`;
-      mensagem += `Instalação: ${registroBanco.instalacao}\n`;
-      mensagem += `Estrutura: ${registroBanco.estrutura}\n`;
-      mensagem += `Conjunto: ${registroBanco.conjunto}\n`;
-      mensagem += `Quantidade já lançada: ${registroBanco.quantidade}\n\n`;
+      mensagem += `Data: ${registroBancoDuplicado.data}\n`;
+      mensagem += `Processo: ${registroBancoDuplicado.processo}\n`;
+      mensagem += `Fábrica: ${registroBancoDuplicado.fabrica}\n`;
+      mensagem += `Fornecedor: ${registroBancoDuplicado.fornecedor}\n`;
+      mensagem += `Obra: ${registroBancoDuplicado.obra}\n`;
+      mensagem += `Instalação: ${registroBancoDuplicado.instalacao}\n`;
+      mensagem += `Estrutura: ${registroBancoDuplicado.estrutura}\n`;
+      mensagem += `Conjunto: ${registroBancoDuplicado.conjunto}\n`;
+      mensagem += `Quantidade já lançada: ${registroBancoDuplicado.quantidade}\n\n`;
     }
 
     mensagem += "Deseja continuar com o salvamento?";

@@ -419,7 +419,7 @@ async function validarEFinalizar() {
 
   // ===== VERIFICA DUPLICIDADE NO BANCO =====
 
-  let encontrouDuplicidade = false;
+  let linhasDuplicadas = [];
 
   for (const registro of registrosPendentes) {
 
@@ -443,7 +443,6 @@ async function validarEFinalizar() {
 
     if (existente && existente.length > 0) {
       linhasDuplicadas.push(registro._tr);
-      break;
     }
   }
 
@@ -470,41 +469,26 @@ async function validarEFinalizar() {
     }
   }
 
-
-  if (encontrouDuplicidade) {
-
-    const continuar = confirm(
-      "Duplicidade de lançamento no banco de dados!\n\nDeseja continuar com o salvamento?"
-    );
-
-    if (!continuar) {
-      return; // usuário cancelou
-    }
-  }
-
   // ===== INSERE APÓS CONFIRMAÇÃO =====
 
-  const { error } = await supabase
-    .from("apontamentos")
-    const registrosParaSalvar = registrosPendentes.map(r => {
-      const { _tr, ...dados } = r;
-      return dados;
-    });
+  const registrosParaSalvar = registrosPendentes.map(r => {
+    const { _tr, ...dados } = r;
+    return dados;
+  });
 
-  const { error } = await supabase
+  const { error: erroInsert } = await supabase
     .from("apontamentos")
     .insert(registrosParaSalvar);
 
-
-  if (error) {
-    alert("Erro ao salvar: " + error.message);
+  if (erroInsert) {
+    alert("Erro ao salvar: " + erroInsert.message);
     return;
   }
 
   alert("Apontamento salvo com sucesso!");
   tbody.innerHTML = "";
   addLinha();
-
+  
 }
 
 window.addLinha = addLinha;

@@ -402,6 +402,7 @@ async function validarEFinalizar() {
     controleDuplicidade.add(chave);
 
     registrosPendentes.push({
+      _tr: tr, //referência da linha
       data: data.value,
       processo: processo.value,
       equipe,
@@ -441,10 +442,34 @@ async function validarEFinalizar() {
     }
 
     if (existente && existente.length > 0) {
-      encontrouDuplicidade = true;
+      linhasDuplicidas.push(registro._tr);
       break;
     }
   }
+
+  // Remove destaque antigo
+  tbody.querySelectorAll("tr").forEach(tr => {
+    tr.style.backgroundColor = "";
+    tr.style.border = "";
+  });
+
+  if (linhasDuplicadas.length > 0) {
+
+    // Destaca linhas duplicadas
+    linhasDuplicadas.forEach(tr => {
+      tr.style.backgroundColor = "#ffe5e5";
+      tr.style.border = "2px solid red";
+    });
+
+    const continuar = confirm(
+      "Duplicidade de lançamento no banco de dados!\n\nAs linhas destacadas já existem.\n\nDeseja continuar com o salvamento?"
+    );
+
+    if (!continuar) {
+      return;
+    }
+  }
+
 
   if (encontrouDuplicidade) {
 
@@ -461,7 +486,15 @@ async function validarEFinalizar() {
 
   const { error } = await supabase
     .from("apontamentos")
-    .insert(registrosPendentes);
+    const registrosParaSalvar = registrosPendentes.map(r => {
+      const { _tr, ...dados } = r;
+      return dados;
+    });
+
+  const { error } = await supabase
+    .from("apontamentos")
+    .insert(registrosParaSalvar);
+
 
   if (error) {
     alert("Erro ao salvar: " + error.message);

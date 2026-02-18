@@ -425,7 +425,7 @@ async function validarEFinalizar() {
 
     const { data: existente, error: erroConsulta } = await supabase
       .from("apontamentos")
-      .select("id")
+      .select("data, processo, fabrica, fornecedor, obra, instalacao, estrutura, conjunto, quantidade")
       .eq("data", registro.data)
       .eq("processo", registro.processo)
       .eq("fabrica", registro.fabrica)
@@ -440,10 +440,14 @@ async function validarEFinalizar() {
       alert("Erro ao verificar duplicidade no banco.");
       return;
     }
+    
+    let linhasDuplicadas = [];
+    let existenteRigistro = null;
 
     if (existente && existente.length > 0) {
       linhasDuplicadas.push(registro._tr);
-    }
+      var existenteRegistro = existente[0];
+    } 
   }
 
   // Remove destaque antigo
@@ -454,15 +458,33 @@ async function validarEFinalizar() {
 
   if (linhasDuplicadas.length > 0) {
 
-    // Destaca linhas duplicadas
+   // Destaca linhas duplicadas
     linhasDuplicadas.forEach(tr => {
       tr.style.backgroundColor = "#ffe5e5";
       tr.style.border = "2px solid red";
     });
 
-    const continuar = confirm(
-      "Duplicidade de lançamento no banco de dados!\n\nAs linhas destacadas já existem.\n\nDeseja continuar com o salvamento?"
-    );
+    // Monta mensagem detalhada
+    const registroBanco = linhasDuplicadas.length > 0 ? existente?.[0] : null;
+
+    let mensagem = "Duplicidade de lançamento no banco de dados!\n\n";
+
+    if (registroBanco) {
+      mensagem += "Registro já existente:\n\n";
+      mensagem += `Data: ${registroBanco.data}\n`;
+      mensagem += `Processo: ${registroBanco.processo}\n`;
+      mensagem += `Fábrica: ${registroBanco.fabrica}\n`;
+      mensagem += `Fornecedor: ${registroBanco.fornecedor}\n`;
+      mensagem += `Obra: ${registroBanco.obra}\n`;
+      mensagem += `Instalação: ${registroBanco.instalacao}\n`;
+      mensagem += `Estrutura: ${registroBanco.estrutura}\n`;
+      mensagem += `Conjunto: ${registroBanco.conjunto}\n`;
+      mensagem += `Quantidade já lançada: ${registroBanco.quantidade}\n\n`;
+    }
+
+    mensagem += "Deseja continuar com o salvamento?";
+
+    const continuar = confirm(mensagem);
 
     if (!continuar) {
       return;
@@ -488,7 +510,7 @@ async function validarEFinalizar() {
   alert("Apontamento salvo com sucesso!");
   tbody.innerHTML = "";
   addLinha();
-  
+
 }
 
 window.addLinha = addLinha;

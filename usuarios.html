@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel de Usuários</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body { font-family: Arial; background: #f4f6f8; padding: 30px; }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2e7d32;
+  color: white;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+select, button {
+  padding: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <span id="usuarioInfo"></span>
+  <button onclick="logout()">Sair</button>
+</div>
+
+<h2>Painel Administrativo de Usuários</h2>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>ID</th>
+<th>Perfil</th>
+<th>Status</th>
+<th>Salvar</th>
+</tr>
+</thead>
+<tbody id="tabelaUsuarios"></tbody>
+</table>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) window.location.href = "login.html";
+
+const { data: perfilLogado } = await supabase
+  .from("usuarios_perfil")
+  .select("nome, perfil")
+  .eq("id", user.id)
+  .single();
+
+if (perfilLogado.perfil !== "admin") {
+  alert("Acesso restrito a administradores.");
+  window.location.href = "index.html";
+}
+
+document.getElementById("usuarioInfo").innerText =
+  perfilLogado.nome + " - ADMIN";
+
+window.logout = async function () {
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+};
+
+async function carregarUsuarios() {
+
+  const { data, error } = await supabase
+    .from("usuarios_perfil")
+    .select("*");
+
+  if (error) {
+    alert("Erro ao carregar usuários.");
+    return;
+  }
+
+  const tbody = document.getElementById("tabelaUsuarios");
+  tbody.innerHTML = "";
+
+  data.forEach(u => {
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${u.nome}</td>
+      <td>${u.id}</td>
+      <td>
+        <select id="perfil_${u.id}">
+          <option value="admin" ${u.perfil==="admin"?"selected":""}>Admin</option>
+          <option value="supervisor" ${u.perfil==="supervisor"?"selected":""}>Supervisor</option>
+          <option value="operador" ${u.perfil==="operador"?"selected":""}>Operador</option>
+        </select>
+      </td>
+      <td>
+        <select id="ativo_${u.id}">
+          <option value="true" ${u.ativo?"selected":""}>Ativo</option>
+          <option value="false" ${!u.ativo?"selected":""}>Inativo</option>
+        </select>
+      </td>
+      <td>
+        <button onclick="salvarUsuario('${u.id}')">Salvar</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+window.salvarUsuario = async function(id) {
+
+  const novoPerfil = document.getElementById("perfil_"+id).value;
+  const novoStatus = document.getElementById("ativo_"+id).value === "true";
+
+  const { error } = await supabase
+    .from("usuarios_perfil")
+    .update({
+      perfil: novoPerfil,
+      ativo: novoStatus
+    })
+    .eq("id", id);
+
+  if (error) {
+    alert("Erro ao atualizar.");
+    return;
+  }
+
+  alert("Usuário atualizado.");
+};
+
+carregarUsuarios();
+</script>
+
+</body>
+</html>

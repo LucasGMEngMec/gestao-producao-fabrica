@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Perfil do Usuário</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial;
+  background: #f4f6f8;
+  padding: 30px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2e7d32;
+  color: white;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+}
+
+.card {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+label {
+  font-weight: bold;
+  display: block;
+  margin-top: 15px;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <span id="usuarioInfo"></span>
+  <button onclick="logout()">Sair</button>
+</div>
+
+<div class="card">
+  <h2>Perfil do Usuário</h2>
+
+  <label>Email</label>
+  <input id="email" disabled>
+
+  <label>ID do Usuário</label>
+  <input id="userid" disabled>
+
+  <label>Nome</label>
+  <input id="nome">
+
+  <label>Nova Senha</label>
+  <input type="password" id="novaSenha">
+
+  <button onclick="salvarPerfil()">Salvar Alterações</button>
+</div>
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
+// 🔐 Verifica sessão
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  window.location.href = "login.html";
+}
+
+// 🔎 Buscar perfil
+const { data } = await supabase
+  .from("usuarios_perfil")
+  .select("nome, perfil")
+  .eq("id", user.id)
+  .single();
+
+document.getElementById("usuarioInfo").innerText =
+  data?.nome + " - " + data?.perfil;
+
+document.getElementById("email").value = user.email;
+document.getElementById("userid").value = user.id;
+document.getElementById("nome").value = data?.nome || "";
+
+// 🚪 Logout
+window.logout = async function () {
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+};
+
+// 💾 Salvar perfil
+window.salvarPerfil = async function () {
+
+  const novoNome = document.getElementById("nome").value;
+  const novaSenha = document.getElementById("novaSenha").value;
+
+  const { error: erroNome } = await supabase
+    .from("usuarios_perfil")
+    .update({ nome: novoNome })
+    .eq("id", user.id);
+
+  if (erroNome) {
+    alert("Erro ao atualizar nome.");
+    return;
+  }
+
+  if (novaSenha) {
+    const { error: erroSenha } = await supabase.auth.updateUser({
+      password: novaSenha
+    });
+
+    if (erroSenha) {
+      alert("Erro ao atualizar senha.");
+      return;
+    }
+  }
+
+  alert("Perfil atualizado com sucesso.");
+};
+</script>
+
+</body>
+</html>

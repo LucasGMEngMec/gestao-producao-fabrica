@@ -172,6 +172,10 @@ let registrosPendentes = [];
 
 const { data: { user } } = await supabase.auth.getUser();
 
+if (!user) {
+  window.location.href = "login.html";
+}
+
 let usuarioLogado = null;
 
 if (user) {
@@ -554,8 +558,8 @@ async function validarEFinalizar() {
       quantidade,
       fabrica: fabrica.value,
       fornecedor: fornecedor.value
-      usuario_id: uruarioLogado?.id,
-      usuario_nome: usuarioLogado?.nome,
+      usuario_id: usuarioLogado?.id || null,
+      usuario_nome: usuarioLogado?.nome || null,
     });
   }
 

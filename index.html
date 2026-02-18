@@ -168,16 +168,16 @@ const { data, error } = await supabase
   .eq("id", user.id)
   .single();
 
-  //if (error || !data) {
-    //alert("Erro ao carregar perfil do usuário.");
-    //console.log(error);
-    //await supabase.auth.signOut();
-    //window.location.href = "login.html";
-  //}
-
-  if (error || !data) {
-    console.log("Erro ao buscar perfil:", error);
+if (error) {
+    console.error("Erro ao buscar perfil:", error);
+    alert("Erro ao carregar perfil do usuário.");
+    return;
   }
+
+if (!data) {
+  alert("Perfil não encontrado. Contate o administrador.");
+  return;
+}
 
 const usuarioLogado = {
   id: user.id,

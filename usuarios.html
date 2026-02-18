@@ -45,6 +45,22 @@ select, button {
 
 <h2>Painel Administrativo de Usuários</h2>
 
+<h3>Cadastrar Novo Usuário</h3>
+
+<div style="background:white;padding:15px;margin-bottom:20px;border:1px solid #ccc;">
+  <input type="text" id="novoNome" placeholder="Nome" />
+  <input type="email" id="novoEmail" placeholder="Email" />
+  <input type="password" id="novaSenha" placeholder="Senha" />
+
+  <select id="novoPerfil">
+    <option value="admin">Admin</option>
+    <option value="supervisor">Supervisor</option>
+    <option value="operador" selected>Operador</option>
+  </select>
+
+  <button onclick="criarUsuario()">Criar Usuário</button>
+</div>
+
 <table>
 <thead>
 <tr>
@@ -152,6 +168,51 @@ window.salvarUsuario = async function(id) {
 
   alert("Usuário atualizado.");
 };
+
+window.criarUsuario = async function () {
+
+  const nome = document.getElementById("novoNome").value;
+  const email = document.getElementById("novoEmail").value;
+  const senha = document.getElementById("novaSenha").value;
+  const perfil = document.getElementById("novoPerfil").value;
+
+  if (!nome || !email || !senha) {
+    alert("Preencha todos os campos.");
+    return;
+  }
+
+  const response = await fetch(
+    "https://dklmejmlovtcadlicnhu.supabase.co/functions/v1/criar-usuario",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        nome,
+        email,
+        senha,
+        perfil
+      })
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    alert("Erro: " + result.error);
+    return;
+  }
+
+  alert("Usuário criado com sucesso.");
+
+  document.getElementById("novoNome").value = "";
+  document.getElementById("novoEmail").value = "";
+  document.getElementById("novaSenha").value = "";
+
+  carregarUsuarios();
+};
+
 
 carregarUsuarios();
 </script>

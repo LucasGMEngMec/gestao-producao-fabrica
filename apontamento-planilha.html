@@ -181,14 +181,22 @@ let usuarioLogado = null;
 if (user) {
   const { data } = await supabase
     .from("usuarios_perfil")
-    .select("nome")
+    .select("nome, perfil, ativo")
     .eq("id", user.id)
     .single();
 
   usuarioLogado = {
     id: user.id,
-    nome: data?.nome || user.email
+    nome: data?.nome || user.email,
+    perfil: data?.perfil || "operador",
+    ativo: data?.ativo ?? true
   };
+
+  if (!usuarioLogado.ativo) {
+    alert("Usuário inativo. Contate o administrador.");
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  }
 }
 
 /* ============================

@@ -320,6 +320,56 @@ function configurarEventos(tr) {
 /* ============================
    FINALIZAR
 ============================ */
+
+function abrirModalDuplicidade(registroBanco, registroAtual) {
+  return new Promise((resolve) => {
+
+    const modal = document.getElementById("modalDuplicidade");
+    const conteudo = document.getElementById("conteudoDuplicidade");
+
+    conteudo.innerHTML = `
+      <div style="flex:1; min-width:300px;">
+        <h4>Registro já existente no banco</h4>
+        <p><strong>Data:</strong> ${registroBanco.data}</p>
+        <p><strong>Processo:</strong> ${registroBanco.processo}</p>
+        <p><strong>Fábrica:</strong> ${registroBanco.fabrica}</p>
+        <p><strong>Fornecedor:</strong> ${registroBanco.fornecedor}</p>
+        <p><strong>Obra:</strong> ${registroBanco.obra}</p>
+        <p><strong>Instalação:</strong> ${registroBanco.instalacao}</p>
+        <p><strong>Estrutura:</strong> ${registroBanco.estrutura}</p>
+        <p><strong>Conjunto:</strong> ${registroBanco.conjunto}</p>
+        <p><strong>Quantidade:</strong> ${registroBanco.quantidade}</p>
+      </div>
+
+      <div style="flex:1; min-width:300px;">
+        <h4>Registro que está sendo lançado</h4>
+        <p><strong>Data:</strong> ${registroAtual.data}</p>
+        <p><strong>Processo:</strong> ${registroAtual.processo}</p>
+        <p><strong>Fábrica:</strong> ${registroAtual.fabrica}</p>
+        <p><strong>Fornecedor:</strong> ${registroAtual.fornecedor}</p>
+        <p><strong>Obra:</strong> ${registroAtual.obra}</p>
+        <p><strong>Instalação:</strong> ${registroAtual.instalacao}</p>
+        <p><strong>Estrutura:</strong> ${registroAtual.estrutura}</p>
+        <p><strong>Conjunto:</strong> ${registroAtual.conjunto}</p>
+        <p><strong>Quantidade:</strong> ${registroAtual.quantidade}</p>
+      </div>
+    `;
+
+    modal.style.display = "flex";
+
+    document.getElementById("btnCancelarDuplicidade").onclick = () => {
+      modal.style.display = "none";
+      resolve(false);
+    };
+
+    document.getElementById("btnConfirmarDuplicidade").onclick = () => {
+      modal.style.display = "none";
+      resolve(true);
+    };
+
+  });
+}
+
 async function validarEFinalizar() {
 
   if (!data.value) {
@@ -479,7 +529,10 @@ async function validarEFinalizar() {
 
     mensagem += "Deseja continuar com o salvamento?";
 
-    const continuar = confirm(mensagem);
+    const continuar = await abrirModalDuplicidade(
+      registroBancoDuplicado,
+      registrosPendentes[0]
+    );
 
     if (!continuar) {
       return;
@@ -513,6 +566,24 @@ window.validarEFinalizar = validarEFinalizar;
 
 addLinha();
 </script>
+
+window.addLinha = addLinha;
+window.validarEFinalizar = validarEFinalizar;
+
+<div id="modalDuplicidade" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; width:90%; max-width:900px; border-radius:8px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+
+    <h3 style="margin-top:0;">Duplicidade de lançamento detectada</h3>
+
+    <div id="conteudoDuplicidade" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+      <button id="btnCancelarDuplicidade" style="background:#d9534f; color:white; border:none; padding:10px 15px; border-radius:4px;">Cancelar</button>
+      <button id="btnConfirmarDuplicidade" style="background:#2e7d32; color:white; border:none; padding:10px 15px; border-radius:4px;">Continuar Salvamento</button>
+    </div>
+
+  </div>
+</div>
 
 </body>
 </html>

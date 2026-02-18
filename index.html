@@ -5,27 +5,32 @@
 <title>Gestão de Produção</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-const supabase = createClient(
-  "https://dklmejmlovtcadlicnhu.supabase.co",
-  "SUA_CHAVE_PUBLICA_AQUI"
-);
-
-const { data: { session } } = await supabase.auth.getSession();
-
-if (!session) {
-  window.location.href = "login.html";
-}
-</script>
-
 <style>
 body {
   font-family: Arial, sans-serif;
   background: #f2f2f2;
   padding: 40px;
 }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2e7d32;
+  color: white;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+}
+
+.topbar button {
+  background: #d9534f;
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
 .menu {
   max-width: 400px;
   margin: auto;
@@ -33,9 +38,11 @@ body {
   border: 1px solid #cfcfcf;
   padding: 20px;
 }
+
 h2 {
   text-align: center;
 }
+
 a {
   display: block;
   padding: 12px;
@@ -46,13 +53,20 @@ a {
   color: #fff;
   font-size: 16px;
 }
+
 a.grupos {
   background: #2e7d32;
 }
 </style>
+
 </head>
 
 <body>
+
+<div class="topbar">
+  <span id="usuarioInfo"></span>
+  <button onclick="logout()">Sair</button>
+</div>
 
 <div class="menu">
   <h2>Gestão de Produção</h2>
@@ -61,24 +75,88 @@ a.grupos {
     Apontamento de Produção
   </a>
 
-  <a class="grupos" href="grupos.html">
-   Cadastro de Grupos
+  <a id="linkGrupos" class="grupos" href="grupos.html">
+    Cadastro de Grupos
   </a>
 
-  <a class="grupos" href="equipes.html">
+  <a id="linkEquipes" class="grupos" href="equipes.html">
     Cadastro de Equipes
   </a>
 
-  <a class="grupos" href="cronograma.html">
+  <a id="linkCronograma" class="grupos" href="cronograma.html">
     Cadastro de Cronograma
   </a>
 
-  <a class="grupos" href="gantt.html">
+  <a id="linkGantt" class="grupos" href="gantt.html">
     Cronograma de Produção
   </a>
-
 </div>
 
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const supabase = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "SUA_CHAVE_PUBLICA_AQUI"
+);
+
+// 🔐 Verifica sessão
+const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  window.location.href = "login.html";
+}
+
+// 🔎 Busca perfil
+const { data } = await supabase
+  .from("usuarios_perfil")
+  .select("nome, perfil, ativo")
+  .eq("id", user.id)
+  .single();
+
+const usuarioLogado = {
+  id: user.id,
+  nome: data?.nome || user.email,
+  perfil: data?.perfil || "operador",
+  ativo: data?.ativo ?? true
+};
+
+if (!usuarioLogado.ativo) {
+  alert("Usuário inativo.");
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+}
+
+// 🔐 Helper permissão
+function temPermissao(perfisPermitidos) {
+  return perfisPermitidos.includes(usuarioLogado.perfil);
+}
+
+// 👤 Exibir usuário
+document.getElementById("usuarioInfo").innerText =
+  "Usuário: " + usuarioLogado.nome +
+  " | Perfil: " + usuarioLogado.perfil.toUpperCase();
+
+// 🎯 MENU DINÂMICO
+
+// Supervisor e Admin veem equipes
+if (!temPermissao(["admin","supervisor"])) {
+  document.getElementById("linkEquipes").style.display = "none";
+}
+
+// Somente Admin vê grupos e cronograma
+if (!temPermissao(["admin"])) {
+  document.getElementById("linkGrupos").style.display = "none";
+  document.getElementById("linkCronograma").style.display = "none";
+  document.getElementById("linkGantt").style.display = "none";
+}
+
+// 🚪 Logout
+window.logout = async function () {
+  await supabase.auth.signOut();
+  window.location.href = "login.html";
+};
+</script>
 
 </body>
 </html>

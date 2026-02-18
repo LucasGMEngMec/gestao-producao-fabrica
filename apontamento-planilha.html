@@ -197,6 +197,17 @@ if (user) {
     await supabase.auth.signOut();
     window.location.href = "login.html";
   }
+
+  if (!temPermissao(["admin"])) {
+    alert("Somente administrador pode excluir.");
+    return;
+  }
+
+  if (!temPermissao(["admin","supervisor"])) {
+    alert("Você não tem permissão para editar.");
+    return;
+  }
+
 }
 
 /* ============================

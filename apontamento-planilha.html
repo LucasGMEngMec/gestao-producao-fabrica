@@ -416,6 +416,49 @@ async function validarEFinalizar() {
     });
   }
 
+  // ===== VERIFICA DUPLICIDADE NO BANCO =====
+
+  let encontrouDuplicidade = false;
+
+  for (const registro of registrosPendentes) {
+
+    const { data: existente, error: erroConsulta } = await supabase
+      .from("apontamentos")
+      .select("id")
+      .eq("data", registro.data)
+      .eq("processo", registro.processo)
+      .eq("fabrica", registro.fabrica)
+      .eq("fornecedor", registro.fornecedor)
+      .eq("obra", registro.obra)
+      .eq("instalacao", registro.instalacao)
+      .eq("estrutura", registro.estrutura)
+      .eq("conjunto", registro.conjunto)
+      .limit(1);
+
+    if (erroConsulta) {
+      alert("Erro ao verificar duplicidade no banco.");
+      return;
+    }
+
+    if (existente && existente.length > 0) {
+      encontrouDuplicidade = true;
+      break;
+    }
+  }
+
+  if (encontrouDuplicidade) {
+
+    const continuar = confirm(
+      "Duplicidade de lançamento no banco de dados!\n\nDeseja continuar com o salvamento?"
+    );
+
+    if (!continuar) {
+      return; // usuário cancelou
+    }
+  }
+
+  // ===== INSERE APÓS CONFIRMAÇÃO =====
+
   const { error } = await supabase
     .from("apontamentos")
     .insert(registrosPendentes);
@@ -428,6 +471,7 @@ async function validarEFinalizar() {
   alert("Apontamento salvo com sucesso!");
   tbody.innerHTML = "";
   addLinha();
+
 }
 
 window.addLinha = addLinha;

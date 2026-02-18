@@ -170,6 +170,23 @@ const supabase = createClient(
 const tbody = document.querySelector("#grid tbody");
 let registrosPendentes = [];
 
+const { data: { user } } = await supabase.auth.getUser();
+
+let usuarioLogado = null;
+
+if (user) {
+  const { data } = await supabase
+    .from("usuarios_perfil")
+    .select("nome")
+    .eq("id", user.id)
+    .single();
+
+  usuarioLogado = {
+    id: user.id,
+    nome: data?.nome || user.email
+  };
+}
+
 /* ============================
    UTIL
 ============================ */
@@ -537,6 +554,8 @@ async function validarEFinalizar() {
       quantidade,
       fabrica: fabrica.value,
       fornecedor: fornecedor.value
+      usuario_id: uruarioLogado?.id,
+      usuario_nome: usuarioLogado?.nome,
     });
   }
 

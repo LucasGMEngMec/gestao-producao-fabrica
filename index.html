@@ -171,12 +171,12 @@ const { data, error } = await supabase
 if (error) {
     console.error("Erro ao buscar perfil:", error);
     alert("Erro ao carregar perfil do usuário.");
-    return;
+    window.location.href = "login.html";
   }
 
 if (!data) {
   alert("Perfil não encontrado. Contate o administrador.");
-  return;
+  window.location.href = "login.html";
 }
 
 const usuarioLogado = {

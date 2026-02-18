@@ -14,21 +14,60 @@ body {
 
 .topbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   background: #2e7d32;
-  color: white;
   padding: 10px 20px;
-  margin-bottom: 20px;
+  position: relative;
 }
 
-.topbar button {
-  background: #d9534f;
-  border: none;
-  padding: 6px 12px;
-  color: white;
+.user-menu {
+  position: relative;
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
   cursor: pointer;
-  border-radius: 4px;
+  gap: 10px;
+}
+
+.user-trigger img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid white;
+}
+
+.user-info {
+  color: white;
+  font-size: 14px;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 55px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  display: none;
+  flex-direction: column;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.dropdown button {
+  padding: 10px;
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown button:hover {
+  background: #f2f2f2;
 }
 
 .menu {
@@ -64,8 +103,19 @@ a.grupos {
 <body>
 
 <div class="topbar">
-  <span id="usuarioInfo"></span>
-  <button onclick="logout()">Sair</button>
+  <div class="user-menu">
+    <div class="user-trigger" onclick="toggleUserMenu()">
+      <img id="userAvatar" src="https://via.placeholder.com/40" />
+      <div class="user-info">
+        <span id="usuarioInfo"></span>
+      </div>
+    </div>
+
+    <div class="dropdown" id="userDropdown">
+      <button onclick="abrirPerfil()">Perfil do Usuário</button>
+      <button onclick="logout()">Log Off</button>
+    </div>
+  </div>
 </div>
 
 <div class="menu">
@@ -90,6 +140,10 @@ a.grupos {
   <a id="linkGantt" class="grupos" href="gantt.html">
     Cronograma de Produção
   </a>
+
+  <a id="linkUsuarios" class="grupos" href="usuarios.html">
+    Administração de Usuários
+  </a>
 </div>
 
 <script type="module">
@@ -97,7 +151,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const supabase = createClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
-  "SUA_CHAVE_PUBLICA_AQUI"
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
 
 // 🔐 Verifica sessão
@@ -108,11 +162,22 @@ if (!user) {
 }
 
 // 🔎 Busca perfil
-const { data } = await supabase
+const { data, error } = await supabase
   .from("usuarios_perfil")
   .select("nome, perfil, ativo")
   .eq("id", user.id)
   .single();
+
+  //if (error || !data) {
+    //alert("Erro ao carregar perfil do usuário.");
+    //console.log(error);
+    //await supabase.auth.signOut();
+    //window.location.href = "login.html";
+  //}
+
+  if (error || !data) {
+    console.log("Erro ao buscar perfil:", error);
+  }
 
 const usuarioLogado = {
   id: user.id,
@@ -134,8 +199,28 @@ function temPermissao(perfisPermitidos) {
 
 // 👤 Exibir usuário
 document.getElementById("usuarioInfo").innerText =
-  "Usuário: " + usuarioLogado.nome +
-  " | Perfil: " + usuarioLogado.perfil.toUpperCase();
+usuarioLogado.nome + " - " + usuarioLogado.perfil.toUpperCase();
+
+  // Dropdown usuário
+window.toggleUserMenu = function () {
+  const menu = document.getElementById("userDropdown");
+  menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+};
+
+// Fecha menu ao clicar fora
+document.addEventListener("click", function (e) {
+  const menu = document.getElementById("userDropdown");
+  const trigger = document.querySelector(".user-trigger");
+
+  if (!trigger.contains(e.target)) {
+    menu.style.display = "none";
+  }
+});
+
+// Abrir página perfil
+window.abrirPerfil = function () {
+  window.location.href = "perfil.html";
+};
 
 // 🎯 MENU DINÂMICO
 
@@ -149,6 +234,11 @@ if (!temPermissao(["admin"])) {
   document.getElementById("linkGrupos").style.display = "none";
   document.getElementById("linkCronograma").style.display = "none";
   document.getElementById("linkGantt").style.display = "none";
+}
+
+// Somente Admin vê painel de usuários
+if (!temPermissao(["admin"])) {
+  document.getElementById("linkUsuarios").style.display = "none";
 }
 
 // 🚪 Logout

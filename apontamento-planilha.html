@@ -152,6 +152,13 @@ th { background: #eee; white-space: nowrap; }
 </div>
 </div>
 
+<div class="tabela">
+  <h3>Apontamentos já lançados</h3>
+  <div id="historicoContainer">
+    <p style="color:#666;">Selecione data e processo para visualizar.</p>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -315,6 +322,72 @@ function configurarEventos(tr) {
 
     if (data?.length) descricao.value = data[0].descricao;
   });
+}
+
+/*CARREGAR HISTÓRICO*/
+
+async function carregarHistorico() {
+
+  const dataSelecionada = data.value;
+  const processoSelecionado = processo.value;
+
+  const container = document.getElementById("historicoContainer");
+
+  if (!dataSelecionada || !processoSelecionado) {
+    container.innerHTML = `<p style="color:#666;">Selecione data e processo para visualizar.</p>`;
+    return;
+  }
+
+  const { data: registros, error } = await supabase
+    .from("apontamentos")
+    .select("fabrica, fornecedor, obra, instalacao, estrutura, conjunto, quantidade")
+    .eq("processo", processoSelecionado)
+    .gte("data", dataSelecionada + "T00:00:00")
+    .lte("data", dataSelecionada + "T23:59:59");
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Erro ao carregar histórico.</p>`;
+    return;
+  }
+
+  if (!registros || registros.length === 0) {
+    container.innerHTML = `<p style="color:#666;">Nenhum apontamento encontrado.</p>`;
+    return;
+  }
+
+  let html = `
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead>
+        <tr>
+          <th>Fábrica</th>
+          <th>Fornecedor</th>
+          <th>Obra</th>
+          <th>Instalação</th>
+          <th>Estrutura</th>
+          <th>Conjunto</th>
+          <th>Qtd</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  registros.forEach(r => {
+    html += `
+      <tr>
+        <td>${r.fabrica}</td>
+        <td>${r.fornecedor}</td>
+        <td>${r.obra}</td>
+        <td>${r.instalacao}</td>
+        <td>${r.estrutura}</td>
+        <td>${r.conjunto}</td>
+        <td>${r.quantidade}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+
+  container.innerHTML = html;
 }
 
 /* ============================
@@ -558,17 +631,19 @@ async function validarEFinalizar() {
   alert("Apontamento salvo com sucesso!");
   tbody.innerHTML = "";
   addLinha();
+  carregarHistorico();
 
 }
 
 window.addLinha = addLinha;
 window.validarEFinalizar = validarEFinalizar;
 
-addLinha();
-</script>
+data.addEventListener("change", carregarHistorico);
+processo.addEventListener("change", carregarHistorico);
 
-window.addLinha = addLinha;
-window.validarEFinalizar = validarEFinalizar;
+addLinha();
+
+</script>
 
 <div id="modalDuplicidade" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
   <div style="background:#fff; width:90%; max-width:900px; border-radius:8px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">

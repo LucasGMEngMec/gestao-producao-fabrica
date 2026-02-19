@@ -73,6 +73,20 @@
 
 </div>
 
+</div>
+
+<!-- Chart.js já está no head, OK -->
+
+<!-- SUPABASE (OBRIGATÓRIO) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const { createClient } = supabase;
+  window.createSupabaseClient = createClient;
+</script>
+
+<!-- Seu JS -->
 <script src="dashboard.js"></script>
+
 </body>
 </html>
+

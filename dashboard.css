@@ -16,7 +16,8 @@ body {
 }
 
 .logo img {
-  height: 45px;
+  height: 55px;
+  object-fit: contain;
 }
 
 .kpi-principal h1 {

@@ -107,6 +107,8 @@ window.logout = async function () {
 
 async function carregarUsuarios() {
 
+  const { data: { session } } = await supabase.auth.getSession();
+
   const response = await fetch(
     "https://dklmejmlovtcadlicnhu.supabase.co/functions/v1/listar-usuarios",
     {
@@ -117,31 +119,21 @@ async function carregarUsuarios() {
         "Authorization": "Bearer " + session.access_token
       }
     }
-  )
+  );
 
-  const result = await response.json()
+  const result = await response.json();
 
-  if (result.error) {
-    alert("Erro ao carregar usuários: " + result.error)
-    return
-  }
-
-  const usuarios = result.data
-
-  console.log("Usuários recebidos:", usuarios)
-
-  // Aqui você monta a tabela normalmente
-  }
-
-  if (error) {
-    alert("Erro ao carregar usuários.");
+  if (!response.ok) {
+    alert("Erro ao carregar usuários: " + (result.error || "Erro desconhecido"));
     return;
   }
+
+  const usuarios = result.data;
 
   const tbody = document.getElementById("tabelaUsuarios");
   tbody.innerHTML = "";
 
-  data.forEach(u => {
+  usuarios.forEach(u => {
 
     const tr = document.createElement("tr");
 
@@ -212,6 +204,7 @@ window.criarUsuario = async function () {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "apikey": "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At",
         "Authorization": "Bearer " + session.access_token
       },
       body: JSON.stringify({

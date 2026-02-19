@@ -45,11 +45,11 @@ function processarDados(registros) {
 
     if (!agrupado[r.data]) {
       agrupado[r.data] = {
-        pintura: 0,
-        montagem: 0,
-        soldagem: 0,
-        acabamento: 0,
-        entrega: 0
+        Pintura: 0,
+        Montagem: 0,
+        Soldagem: 0,
+        Acabamento: 0,
+        Entrega: 0
       };
     }
 

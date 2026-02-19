@@ -8,6 +8,8 @@
 </head>
 <body>
 
+<button class="btn-filtro" onclick="abrirFiltro()">☰</button>
+
 <div class="container">
 
   <!-- HEADER -->
@@ -88,6 +90,22 @@
 
 <!-- Seu JS -->
 <script src="dashboard.js"></script>
+
+<div id="modalFiltro" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="fecharFiltro()">✕</span>
+    <h3>Filtros</h3>
+    <div class="filtros-grid">
+      <select id="fabrica"></select>
+      <select id="fornecedor"></select>
+      <select id="obra"></select>
+      <select id="instalacao"></select>
+      <select id="estrutura"></select>
+      <select id="descricao"></select>
+    </div>
+    <button onclick="carregarDados()">Aplicar</button>
+  </div>
+</div>
 
 </body>
 </html>

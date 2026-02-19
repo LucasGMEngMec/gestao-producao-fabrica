@@ -91,11 +91,14 @@ body {
   display: flex;
   justify-content: space-between;
   margin-bottom: 10px;
+  <button onclick="abrirDetalhe('montagem')">📄</button>
 }
 
 .card-header span {
   font-weight: bold;
   font-size: 18px;
+  <button onclick="abrirDetalhe('montagem')">📄</button>
+
 }
 
 .entrega {
@@ -104,4 +107,43 @@ body {
 
 canvas {
   max-height: 130px !important;
+}
+
+.btn-filtro {
+  background: #8b1e23;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: #8b1e23;
+  padding: 30px;
+  border-radius: 20px;
+  width: 70%;
+  color: white;
+}
+
+.modal-content select {
+  width: 100%;
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 6px;
+  border: none;
+}
+
+.close {
+  float: right;
+  cursor: pointer;
 }

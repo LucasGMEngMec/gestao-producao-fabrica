@@ -66,7 +66,15 @@ function processarDados(registros) {
 /* ================= ATUALIZA DASHBOARD ================= */
 function atualizarDashboard(dados) {
 
-  const datas = Object.keys(dados);
+  const datasBrutas = Object.keys(dados);
+
+  const datas = datasBrutas.map(d => {
+    const dt = new Date(d);
+    const dia = String(dt.getDate()).padStart(2, '0');
+    const mes = String(dt.getMonth() + 1).padStart(2, '0');
+    const ano = String(dt.getFullYear()).slice(-2);
+    return `${dia}/${mes}/${ano}`;
+  });
 
   const pintura = [];
   const montagem = [];
@@ -137,19 +145,31 @@ function criarGrafico(id, labels, valores) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      aspectoRatio: 2,
       plugins: {
         legend: { display: false },
         datalabels: {
           anchor: "end",
           align: "top",
+          offset: 4,
+          clamp: true,
+          clip: false,
           color: "#333",
-          font: { weight: "bold" },
+          font: { weight: "bold", size: 11 },
           formatter: (value) =>
             value > 0 ? (value / 1000).toFixed(2) + " Mil" : ""
         }
       },
       scales: {
-        x: { grid: { display: false } },
+        x: { 
+           grid: { display: false },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45,
+              autoSkip: false
+            }
+          },
+
         y: {
           beginAtZero: true,
           grid: { display: false }
@@ -158,6 +178,15 @@ function criarGrafico(id, labels, valores) {
     },
     plugins: [ChartDataLabels]
   });
+}
+
+/* ================= MODAL FILTRO ================= */
+function abrirFiltro() {
+  document.getElementById("modalFiltro").style.display = "flex";
+}
+
+function fecharFiltro() {
+  document.getElementById("modalFiltro").style.display = "none";
 }
 
 /* ================= INICIALIZA ================= */

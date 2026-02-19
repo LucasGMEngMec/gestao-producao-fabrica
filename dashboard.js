@@ -1,7 +1,9 @@
 console.log("Dashboard carregado");
 
 /* ================= SUPABASE ================= */
-const supabase = window.createSupabaseClient(
+const { createClient } = supabase;
+
+const supabaseClient = createClient(
   "https://dklmejmlovtcadlicnhu.supabase.co",
   "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
@@ -15,7 +17,7 @@ async function carregarDados() {
   const inicio = document.getElementById("dataInicio").value;
   const fim = document.getElementById("dataFim").value;
 
-  let query = supabase
+  let query = supabaseClient
     .from("vw_producao_kg")
     .select("*")
     .order("data", { ascending: true });

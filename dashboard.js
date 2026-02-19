@@ -34,6 +34,7 @@ async function carregarDados() {
   }
 
   processarDados(data);
+  popularFiltros(data);
 }
 
 /* ================= PROCESSAMENTO ================= */
@@ -152,11 +153,12 @@ function criarGrafico(id, labels, valores) {
           clamp: true,
           clip: false,
           color: "#333",
-          font: { weight: "bold", size: 11 },
-          formatter: (value) =>
-            value > 0 ? (value / 1000).toFixed(2) + " Mil" : ""
-        }
-      },
+          font: { weight: "bold", size: 12 },
+          formatter: (value) => {
+            if (!value || value === 0 return "";
+            return (value / 1000).toFixed(2) + "Mil";
+         }
+        },
       scales: {
         x: { 
            grid: { display: false },
@@ -169,6 +171,7 @@ function criarGrafico(id, labels, valores) {
 
         y: {
           beginAtZero: true,
+          display: false,
           grid: { display: false }
         }
       }
@@ -184,6 +187,46 @@ function abrirFiltro() {
 
 function fecharFiltro() {
   document.getElementById("modalFiltro").style.display = "none";
+}
+
+function abrirDetalhe(processo) {
+  alert("Abrir tabela de produção: " + processo);
+}
+
+function popularFiltros(dados) {
+
+  const campos = [
+    "fabrica",
+    "fornecedor",
+    "obra",
+    "instalacao",
+    "estrutura",
+    "descricao"
+  ];
+
+  campos.forEach(campo => {
+
+    const select = document.getElementById(campo);
+    if (!select) return;
+
+    const valoresUnicos = [
+      ...new Set(
+        dados
+          .map(d => d[campo])
+          .filter(v => v && v !== "")
+      )
+    ];
+
+    select.innerHTML = '<option value="">Todos</option>';
+
+    valoresUnicos.forEach(valor => {
+      const option = document.createElement("option");
+      option.value = valor;
+      option.textContent = valor;
+      select.appendChild(option);
+    });
+
+  });
 }
 
 /* ================= INICIALIZA ================= */

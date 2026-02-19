@@ -22,7 +22,8 @@ body {
 
 .kpi-principal h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 34px;
+  font-weight: 700;
 }
 
 .kpi-principal {
@@ -41,6 +42,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.filtro label {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .filtro input {
@@ -150,16 +156,18 @@ canvas {
   margin-top: 15px;
   padding: 10px;
   border-radius: 8px;
-  border: none;
-  background: linear-gradient(135deg,#8b1e23,#a52a2a);
-  color: white;
+  border: 2px solid #8b1e23;
+  background: white;
+  color: #8b1e23;
   font-weight: bold;
   cursor: pointer;
   width: 150px;
+  transition: 0.2s;
 }
 
 .btn-aplicar:hover {
-  transform: scale(1.03);
+  background: #8b1e23;
+  color: white;
 }
 
 .filtros-grid {
@@ -173,4 +181,29 @@ canvas {
   font-size: 13px;
   display: block;
   margin-bottom: 4px;
+}
+
+.acoes-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-detalhe {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.destaque {
+  height: 200px;
+}
+
+.card {
+  height: 170px;
+}
+
+canvas {
+  max-height: 110px !important;
 }

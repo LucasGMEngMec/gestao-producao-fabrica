@@ -95,10 +95,7 @@ function atualizarDashboard(dados) {
   atualizarTotal("totalEntrega", entrega);
 
   const totalGeral =
-    soma(pintura) +
-    soma(montagem) +
-    soma(soldagem) +
-    soma(acabamento);
+    soma(pintura);
 
   document.getElementById("totalGeral").innerText =
     formatarMil(totalGeral);
@@ -133,16 +130,33 @@ function criarGrafico(id, labels, valores) {
       labels: labels,
       datasets: [{
         data: valores,
-        backgroundColor: "#8b1e23"
+        backgroundColor: "#8b1e23",
+        borderRadius: 6
       }]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: "end",
+          align: "top",
+          color: "#333",
+          font: { weight: "bold" },
+          formatter: (value) =>
+            value > 0 ? (value / 1000).toFixed(2) + " Mil" : ""
+        }
+      },
       scales: {
-        y: { beginAtZero: true }
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          grid: { display: false }
+        }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 

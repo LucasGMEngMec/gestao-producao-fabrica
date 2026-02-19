@@ -9,16 +9,14 @@ body {
 }
 
 .topo {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 180px 1fr 240px;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
-.logo {
-  font-size: 28px;
-  font-weight: bold;
-  color: #8b1e23;
+.logo img {
+  height: 45px;
 }
 
 .kpi-principal h1 {
@@ -26,15 +24,44 @@ body {
   font-size: 22px;
 }
 
+.kpi-principal {
+  text-align: center;
+}
+
+
 .kpi-principal h2 {
   margin: 0;
-  font-size: 28px;
-  color: #333;
+  font-size: 34px;
+  font-weight: 700;
+  margin-top: 5px;
 }
 
 .filtro {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.filtro input {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+.filtro button {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg,#8b1e23,#a52a2a);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.filtro button:hover {
+  transform: scale(1.03);
 }
 
 .filtro input {
@@ -49,15 +76,15 @@ body {
 
 .destaque {
   grid-column: span 2;
-  height: 350px;
+  height: 240px;
 }
 
 .card {
   background: white;
-  padding: 15px;
+  padding: 12px;
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  height: 260px;
+  height: 190px;
 }
 
 .card-header {
@@ -73,4 +100,8 @@ body {
 
 .entrega {
   grid-column: span 2;
+}
+
+canvas {
+  max-height: 130px !important;
 }

@@ -68,7 +68,7 @@ function atualizarDashboard(dados) {
 
   const datasBrutas = Object.keys(dados);
 
-  const datas = datasBrutas.map(d => {
+  const datasFormatadas = datasBrutas.map(d => {
     const dt = new Date(d);
     const dia = String(dt.getDate()).padStart(2, '0');
     const mes = String(dt.getMonth() + 1).padStart(2, '0');
@@ -82,7 +82,7 @@ function atualizarDashboard(dados) {
   const acabamento = [];
   const entrega = [];
 
-  datas.forEach(d => {
+  datasBrutas.forEach(d => {
     pintura.push(dados[d].pintura);
     montagem.push(dados[d].montagem);
     soldagem.push(dados[d].soldagem);
@@ -90,11 +90,11 @@ function atualizarDashboard(dados) {
     entrega.push(dados[d].entrega);
   });
 
-  criarGrafico("graficoPintura", datas, pintura);
-  criarGrafico("graficoMontagem", datas, montagem);
-  criarGrafico("graficoSoldagem", datas, soldagem);
-  criarGrafico("graficoAcabamento", datas, acabamento);
-  criarGrafico("graficoEntrega", datas, entrega);
+  criarGrafico("graficoPintura", datasFormatadas, pintura);
+  criarGrafico("graficoMontagem", datasFormatadas, montagem);
+  criarGrafico("graficoSoldagem", datasFormatadas, soldagem);
+  criarGrafico("graficoAcabamento", datasFormatadas, acabamento);
+  criarGrafico("graficoEntrega", datasFormatadas, entrega);
 
   atualizarTotal("totalPintura", pintura);
   atualizarTotal("totalMontagem", montagem);
@@ -102,9 +102,7 @@ function atualizarDashboard(dados) {
   atualizarTotal("totalAcabamento", acabamento);
   atualizarTotal("totalEntrega", entrega);
 
-  const totalGeral =
-    soma(pintura);
-
+  const totalGeral = soma(pintura);
   document.getElementById("totalGeral").innerText =
     formatarMil(totalGeral);
 }
@@ -145,7 +143,6 @@ function criarGrafico(id, labels, valores) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      aspectoRatio: 2,
       plugins: {
         legend: { display: false },
         datalabels: {

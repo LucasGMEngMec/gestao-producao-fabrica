@@ -93,17 +93,46 @@
 
 <div id="modalFiltro" class="modal">
   <div class="modal-content">
+
     <span class="close" onclick="fecharFiltro()">✕</span>
     <h3>Filtros</h3>
+
     <div class="filtros-grid">
-      <select id="fabrica"></select>
-      <select id="fornecedor"></select>
-      <select id="obra"></select>
-      <select id="instalacao"></select>
-      <select id="estrutura"></select>
-      <select id="descricao"></select>
+
+      <div>
+        <label>Fábrica</label>
+        <select id="fabrica"></select>
+      </div>
+
+      <div>
+        <label>Fornecedor</label>
+        <select id="fornecedor"></select>
+      </div>
+
+      <div>
+        <label>Obra</label>
+        <select id="obra"></select>
+      </div>
+
+      <div>
+        <label>Instalação</label>
+        <select id="instalacao"></select>
+      </div>
+
+      <div>
+        <label>Estrutura</label>
+        <select id="estrutura"></select>
+      </div>
+
+      <div>
+        <label>Descrição</label>
+        <select id="descricao"></select>
+      </div>
+
     </div>
-    <button onclick="carregarDados()">Aplicar</button>
+
+    <button class="btn-aplicar" onclick="carregarDados()">Aplicar</button>
+
   </div>
 </div>
 

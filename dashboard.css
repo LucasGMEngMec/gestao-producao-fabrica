@@ -10,13 +10,20 @@ body {
 
 .topo {
   display: grid;
-  grid-template-columns: 180px 1fr 240px;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   margin-bottom: 20px;
+  gap: 20px;
 }
 
-.logo img {
-  height: 55px;
+.logo-bdr {
+  display: flex;
+  align-items: center;
+}
+
+.logo-bdr img {
+  height: 70px;      /* ajuste fino aqui */
+  width: auto;
   object-fit: contain;
 }
 

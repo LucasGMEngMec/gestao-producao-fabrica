@@ -120,26 +120,29 @@ if (!usuarioLogado.ativo) {
   window.location.href = "login.html";
 }
 
-if (usuarioLogado.perfil !== "admin", "supervisor") {
+if (usuarioLogado.perfil !== "admin" && usuarioLogado.perfil !== "supervisor") {
   alert("Acesso restrito a administradores e supervisores.");
   window.location.href = "index.html";
 }
 
 async function salvarEquipe() {
+
   const nome = document.getElementById("nomeEquipe").value.trim();
   const integrantes = document.getElementById("integrantes").value.trim();
 
-  const processoSelecionado =
-    document.querySelector('.processos input:checked')?.value;
+  const processos = Array.from(
+    document.querySelectorAll('.processos input:checked')
+  ).map(c => c.value);
 
+  if (!nome) {
+    alert("Informe o nome da equipe.");
+    return;
+  }
 
-  const { error } = await supabase
-  .from("equipes_producao")
-  .insert([{
-    nome,
-    integrantes,
-    processos: processoSelecionado
-  }]);
+  if (processos.length === 0) {
+    alert("Selecione ao menos um processo.");
+    return;
+  }
 
   const { error } = await supabase
     .from("equipes_producao")
@@ -156,7 +159,6 @@ async function salvarEquipe() {
 
   alert("Equipe cadastrada com sucesso!");
 
-  // Limpar campos
   document.getElementById("nomeEquipe").value = "";
   document.getElementById("integrantes").value = "";
   document.querySelectorAll(".processos input").forEach(c => c.checked = false);

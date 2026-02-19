@@ -45,15 +45,19 @@ function processarDados(registros) {
 
     if (!agrupado[r.data]) {
       agrupado[r.data] = {
-        Pintura: 0,
-        Montagem: 0,
-        Soldagem: 0,
-        Acabamento: 0,
-        Entrega: 0
+        pintura: 0,
+        montagem: 0,
+        soldagem: 0,
+        acabamento: 0,
+        entrega: 0
       };
     }
 
-    agrupado[r.data][r.processo] += Number(r.peso_kg);
+    const processo = r.processo.toLowerCase().trim();
+
+    if (agrupado[r.data][processo] !== undefined) {
+      agrupado[r.data][processo] += Number(r.peso_kg);
+    }
   });
 
   atualizarDashboard(agrupado);

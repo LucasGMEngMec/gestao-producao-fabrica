@@ -213,8 +213,82 @@ function fecharFiltro() {
   document.getElementById("modalFiltro").style.display = "none";
 }
 
-function abrirDetalhe(processo) {
-  alert("Abrir tabela de produção: " + processo);
+async function abrirDetalhe(processo) {
+
+  const inicio = document.getElementById("dataInicio").value;
+  const fim = document.getElementById("dataFim").value;
+
+  let query = supabaseClient
+    .from("vw_producao_kg")
+    .select("*")
+    .eq("processo", processo);
+
+  if (inicio) query = query.gte("data", inicio);
+  if (fim) query = query.lte("data", fim);
+
+  camposFiltro.forEach((campo) => {
+    const valor = document.getElementById(campo)?.value;
+    if (valor) {
+      query = query.eq(campo, valor);
+    }
+  });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(error);
+    alert("Erro ao buscar detalhes.");
+    return;
+  }
+
+  montarTabelaDetalhe(data);
+}
+
+function montarTabelaDetalhe(dados) {
+
+  let html = `
+    <div style="background:white; padding:20px; border-radius:10px; max-height:70vh; overflow:auto;">
+      <h3>Detalhamento</h3>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#eee;">
+            <th>Data</th>
+            <th>Obra</th>
+            <th>Instalação</th>
+            <th>Estrutura</th>
+            <th>Conjunto</th>
+            <th>Descrição</th>
+            <th>Peso (kg)</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  dados.forEach(d => {
+    html += `
+      <tr>
+        <td>${d.data}</td>
+        <td>${d.obra || ""}</td>
+        <td>${d.instalacao || ""}</td>
+        <td>${d.estrutura || ""}</td>
+        <td>${d.conjunto || ""}</td>
+        <td>${d.descricao || ""}</td>
+        <td>${Number(d.peso_kg).toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+        </tbody>
+      </table>
+      <br>
+      <button onclick="fecharFiltro()" style="padding:8px 15px;">Fechar</button>
+    </div>
+  `;
+
+  const modal = document.getElementById("modalFiltro");
+  modal.innerHTML = html;
+  modal.style.display = "flex";
 }
 
 function popularFiltros(dados) {

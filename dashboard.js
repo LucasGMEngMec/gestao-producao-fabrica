@@ -308,7 +308,7 @@ function montarTabelaDetalhe(dados) {
     </div>
   `;
 
-  const modal = document.getElementById("modalFiltro");
+  const modal = document.getElementById("modalDetalhe");
   modal.innerHTML = html;
   modal.style.display = "flex";
 }

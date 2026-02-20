@@ -10,6 +10,7 @@ const supabaseClient = createClient(
 
 /* ================= VARIÁVEIS ================= */
 let graficos = {};
+const camposFiltro = ["fabrica", "fornecedor", "obra", "instalacao", "estrutura", "descricao"];
 
 /* ================= CARREGAR DADOS ================= */
 async function carregarDados() {
@@ -24,6 +25,13 @@ async function carregarDados() {
 
   if (inicio) query = query.gte("data", inicio);
   if (fim) query = query.lte("data", fim);
+
+  camposFiltro.forEach((campo) => {
+    const valor = document.getElementById(campo)?.value;
+    fi (valor) {
+      query = query.eq(campo, valor);
+    }
+  });
 
   const { data, error } = await query;
 
@@ -194,16 +202,7 @@ function abrirDetalhe(processo) {
 
 function popularFiltros(dados) {
 
-  const campos = [
-    "fabrica",
-    "fornecedor",
-    "obra",
-    "instalacao",
-    "estrutura",
-    "descricao"
-  ];
-
-  campos.forEach(campo => {
+  camposFiltro.forEach(campo => {
 
     const select = document.getElementById(campo);
     if (!select) return;

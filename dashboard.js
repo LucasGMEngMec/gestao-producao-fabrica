@@ -28,7 +28,7 @@ async function carregarDados() {
 
   camposFiltro.forEach((campo) => {
     const valor = document.getElementById(campo)?.value;
-    fi (valor) {
+    if (valor) {
       query = query.eq(campo, valor);
     }
   });
@@ -167,20 +167,21 @@ function criarGrafico(id, labels, valores) {
             return (value / 1000).toFixed(2) + " Mil";
           }
         }
-      }
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-          autoSkip: false
-        }
       },
-     y: {
-        beginAtZero: true,
-        display: false,
-        grid: { display: false }
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            autoSkip: false
+          }
+        },
+      y: {
+          beginAtZero: true,
+          display: false,
+          grid: { display: false }
+        }
       }
     },
     plugins: [ChartDataLabels]

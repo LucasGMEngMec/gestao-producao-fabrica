@@ -390,7 +390,7 @@ async function gerarPDF() {
   const elemento = document.querySelector(".container");
 
   const canvas = await html2canvas(elemento, {
-    scale: 2, // melhora resolução
+    scale: 2,
     useCORS: true
   });
 
@@ -398,10 +398,18 @@ async function gerarPDF() {
 
   const pdf = new jsPDF("l", "mm", "a4");
 
-  const larguraPDF = 297;
-  const alturaPDF = (canvas.height * larguraPDF) / canvas.width;
+  const pageWidth = pdf.internal.pageSize.getWidth();   // 297 mm
+  const pageHeight = pdf.internal.pageSize.getHeight(); // 210 mm
 
-  pdf.addImage(imgData, "PNG", 0, 0, larguraPDF, alturaPDF);
+  const margem = 15; // margem lateral elegante
+
+  const larguraUtil = pageWidth - (margem * 2);
+  const alturaImagem = (canvas.height * larguraUtil) / canvas.width;
+
+  const posX = margem;
+  const posY = (pageHeight - alturaImagem) / 2; // centraliza verticalmente
+
+  pdf.addImage(imgData, "PNG", posX, posY, larguraUtil, alturaImagem);
 
   pdf.save("dashboard-producao.pdf");
 }

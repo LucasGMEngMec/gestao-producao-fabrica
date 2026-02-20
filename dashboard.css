@@ -109,10 +109,6 @@ body {
   font-size: 18px;
 }
 
-.grid .card:last-child {
-  grid-column: span 2;
-}
-
 canvas {
   max-height: 130px !important;
 }

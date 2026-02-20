@@ -218,7 +218,7 @@ canvas {
 }
 
 .btn-pdf:hover {
-  background: #a8242a;
+  background: #8b1e23;
 }
 
 .logo-bdr img {
@@ -227,7 +227,7 @@ canvas {
 }
 
 .btn-excel {
-  background: #1d6f42;
+  background: #8b1e23;
   color: white;
   border: none;
   padding: 8px 12px;
@@ -238,5 +238,5 @@ canvas {
 }
 
 .btn-excel:hover {
-  background: #218c53;
+  background: #8b1e23;
 }

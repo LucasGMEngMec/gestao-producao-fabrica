@@ -174,8 +174,7 @@ function criarGrafico(id, labels, valores) {
         display: false,
         grid: { display: false }
       }
-    }
-  }
+    },
     plugins: [ChartDataLabels]
   });
 }

@@ -238,18 +238,35 @@ async function abrirDetalhe(processo) {
 function montarTabelaDetalhe(dados) {
 
   let html = `
-    <div style="background:white; padding:20px; border-radius:10px; max-height:70vh; overflow:auto;">
-      <h3>Detalhamento</h3>
-      <table style="width:100%; border-collapse:collapse;">
+    <div style="
+      background:white;
+      padding:25px;
+      border-radius:12px;
+      max-height:75vh;
+      width:90%;
+      max-width:1100px;
+      overflow:auto;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+    ">
+      <h3 style="margin-bottom:20px;">Detalhamento</h3>
+
+      <table style="
+        width:100%;
+        border-collapse:collapse;
+        font-size:14px;
+      ">
         <thead>
-          <tr style="background:#eee;">
-            <th>Data</th>
-            <th>Obra</th>
-            <th>Instalação</th>
-            <th>Estrutura</th>
-            <th>Conjunto</th>
-            <th>Descrição</th>
-            <th>Peso (kg)</th>
+          <tr style="
+            background:#f2f2f2;
+            text-align:left;
+          ">
+            <th style="padding:10px;">Data</th>
+            <th style="padding:10px;">Obra</th>
+            <th style="padding:10px;">Instalação</th>
+            <th style="padding:10px;">Estrutura</th>
+            <th style="padding:10px;">Conjunto</th>
+            <th style="padding:10px;">Descrição</th>
+            <th style="padding:10px; text-align:right;">Peso (kg)</th>
           </tr>
         </thead>
         <tbody>
@@ -257,14 +274,16 @@ function montarTabelaDetalhe(dados) {
 
   dados.forEach(d => {
     html += `
-      <tr>
-        <td>${d.data}</td>
-        <td>${d.obra || ""}</td>
-        <td>${d.instalacao || ""}</td>
-        <td>${d.estrutura || ""}</td>
-        <td>${d.conjunto || ""}</td>
-        <td>${d.descricao || ""}</td>
-        <td>${Number(d.peso_kg).toFixed(2)}</td>
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:8px;">${d.data}</td>
+        <td style="padding:8px;">${d.obra || ""}</td>
+        <td style="padding:8px;">${d.instalacao || ""}</td>
+        <td style="padding:8px;">${d.estrutura || ""}</td>
+        <td style="padding:8px;">${d.conjunto || ""}</td>
+        <td style="padding:8px;">${d.descricao || ""}</td>
+        <td style="padding:8px; text-align:right; font-weight:600;">
+          ${Number(d.peso_kg).toFixed(2)}
+        </td>
       </tr>
     `;
   });
@@ -272,8 +291,19 @@ function montarTabelaDetalhe(dados) {
   html += `
         </tbody>
       </table>
-      <br>
-      <button onclick="fecharFiltro()" style="padding:8px 15px;">Fechar</button>
+
+      <div style="margin-top:20px; text-align:right;">
+        <button onclick="fecharFiltro()" style="
+          padding:8px 18px;
+          border:none;
+          border-radius:6px;
+          background:#8b1e23;
+          color:white;
+          cursor:pointer;
+        ">
+          Fechar
+        </button>
+      </div>
     </div>
   `;
 

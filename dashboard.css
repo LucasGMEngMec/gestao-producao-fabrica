@@ -225,3 +225,18 @@ canvas {
   height: 70px;
   margin-top: 40px;
 }
+
+.btn-excel {
+  background: #1d6f42;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.btn-excel:hover {
+  background: #218c53;
+}

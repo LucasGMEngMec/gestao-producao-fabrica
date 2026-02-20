@@ -413,3 +413,61 @@ async function gerarPDF() {
 
   pdf.save("dashboard-producao.pdf");
 }
+
+async function gerarExcel() {
+
+  let query = supabaseClient
+    .from("vw_producao_kg")
+    .select("*")
+    .order("data", { ascending: true });
+
+  // aplica filtros ativos
+  camposFiltro.forEach((campo) => {
+    const valor = document.getElementById(campo)?.value;
+    if (valor) {
+      query = query.eq(campo, valor);
+    }
+  });
+
+  const inicio = document.getElementById("dataInicio").value;
+  const fim = document.getElementById("dataFim").value;
+
+  if (inicio) query = query.gte("data", inicio);
+  if (fim) query = query.lte("data", fim);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error(error);
+    alert("Erro ao gerar Excel.");
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    alert("Nenhum registro encontrado.");
+    return;
+  }
+
+  // formatação das colunas
+  const dadosFormatados = data.map(item => ({
+    Data: item.data,
+    Obra: item.obra,
+    Instalação: item.instalacao,
+    Estrutura: item.estrutura,
+    Conjunto: item.conjunto,
+    Descrição: item.descricao,
+    Processo: item.processo,
+    Quantidade: item.quantidade,
+    "Peso (kg)": item.peso_kg
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Produção");
+
+  const hoje = new Date();
+  const nomeArquivo = `relatorio_producao_${hoje.toISOString().slice(0,10)}.xlsx`;
+
+  XLSX.writeFile(workbook, nomeArquivo);
+}

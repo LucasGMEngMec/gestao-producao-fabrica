@@ -244,7 +244,7 @@ function montarTabelaDetalhe(dados) {
       border-radius:12px;
       max-height:75vh;
       width:90%;
-      max-width:1100px;
+      max-width:1200px;
       overflow:auto;
       box-shadow:0 10px 30px rgba(0,0,0,0.2);
     ">
@@ -256,16 +256,14 @@ function montarTabelaDetalhe(dados) {
         font-size:14px;
       ">
         <thead>
-          <tr style="
-            background:#f2f2f2;
-            text-align:left;
-          ">
+          <tr style="background:#f2f2f2; text-align:left;">
             <th style="padding:10px;">Data</th>
             <th style="padding:10px;">Obra</th>
             <th style="padding:10px;">Instalação</th>
             <th style="padding:10px;">Estrutura</th>
             <th style="padding:10px;">Conjunto</th>
             <th style="padding:10px;">Descrição</th>
+            <th style="padding:10px; text-align:right;">Quantidade</th>
             <th style="padding:10px; text-align:right;">Peso (kg)</th>
           </tr>
         </thead>
@@ -281,6 +279,9 @@ function montarTabelaDetalhe(dados) {
         <td style="padding:8px;">${d.estrutura || ""}</td>
         <td style="padding:8px;">${d.conjunto || ""}</td>
         <td style="padding:8px;">${d.descricao || ""}</td>
+        <td style="padding:8px; text-align:right;">
+          ${Number(d.quantidade || 0).toFixed(0)}
+        </td>
         <td style="padding:8px; text-align:right; font-weight:600;">
           ${Number(d.peso_kg).toFixed(2)}
         </td>

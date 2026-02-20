@@ -151,7 +151,7 @@ function criarGrafico(id, labels, valores) {
       maintainAspectRatio: false,
       layout: {
         padding: {
-          top: 40
+          top: 30
         }
       },
       plugins: {

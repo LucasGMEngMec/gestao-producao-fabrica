@@ -300,8 +300,8 @@ function montarTabelaDetalhe(dados) {
         <td style="padding:8px; text-align:right; font-weight:600;">
           ${Number(d.peso_kg).toFixed(2)}
         </td>
+        <td style="padding:8px;">${d.usuario_nome || ""}</td>
       </tr>
-      <td style="padding:8px;">${d.usuario_nome || ""}</td>
     `;
   });
 

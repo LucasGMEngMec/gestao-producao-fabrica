@@ -50,7 +50,7 @@ function processarDados(registros) {
         montagem: 0,
         soldagem: 0,
         acabamento: 0,
-        entrega: 0
+        envio: 0
       };
     }
 
@@ -81,27 +81,27 @@ function atualizarDashboard(dados) {
   const montagem = [];
   const soldagem = [];
   const acabamento = [];
-  const entrega = [];
+  const envio = [];
 
   datasBrutas.forEach(d => {
     pintura.push(dados[d].pintura);
     montagem.push(dados[d].montagem);
     soldagem.push(dados[d].soldagem);
     acabamento.push(dados[d].acabamento);
-    entrega.push(dados[d].entrega);
+    envio.push(dados[d].envio);
   });
 
   criarGrafico("graficoPintura", datasFormatadas, pintura);
   criarGrafico("graficoMontagem", datasFormatadas, montagem);
   criarGrafico("graficoSoldagem", datasFormatadas, soldagem);
   criarGrafico("graficoAcabamento", datasFormatadas, acabamento);
-  criarGrafico("graficoEntrega", datasFormatadas, entrega);
+  criarGrafico("graficoEnvio", datasFormatadas, envio);
 
   atualizarTotal("totalPintura", pintura);
   atualizarTotal("totalMontagem", montagem);
   atualizarTotal("totalSoldagem", soldagem);
   atualizarTotal("totalAcabamento", acabamento);
-  atualizarTotal("totalEntrega", entrega);
+  atualizarTotal("totalEnvio", envio);
 
   const totalGeral = soma(pintura);
   document.getElementById("totalGeral").innerText =
@@ -155,7 +155,7 @@ function criarGrafico(id, labels, valores) {
           color: "#333",
           font: { weight: "bold", size: 12 },
           formatter: (value) => {
-            if (!value || value === 0 return "";
+            if (!value || value === 0) return "";
             return (value / 1000).toFixed(2) + "Mil";
          }
         },

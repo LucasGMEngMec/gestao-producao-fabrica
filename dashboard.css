@@ -202,15 +202,3 @@ canvas {
   cursor: pointer;
   font-size: 16px;
 }
-
-.destaque {
-  height: 200px;
-}
-
-.card {
-  height: 170px;
-}
-
-canvas {
-  max-height: 110px !important;
-}

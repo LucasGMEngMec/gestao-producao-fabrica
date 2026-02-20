@@ -273,7 +273,7 @@ function montarTabelaDetalhe(dados) {
   dados.forEach(d => {
     html += `
       <tr style="border-bottom:1px solid #eee;">
-        <td style="padding:8px;">${d.data}</td>
+        <td style="padding:8px;">${formatarData(d.data)}</td>
         <td style="padding:8px;">${d.obra || ""}</td>
         <td style="padding:8px;">${d.instalacao || ""}</td>
         <td style="padding:8px;">${d.estrutura || ""}</td>
@@ -311,6 +311,15 @@ function montarTabelaDetalhe(dados) {
   const modal = document.getElementById("modalFiltro");
   modal.innerHTML = html;
   modal.style.display = "flex";
+}
+
+function formatarData(dataISO) {
+
+  if (!dataISO) return "";
+
+  const [ano, mes, dia] = dataISO.split("-");
+
+  return `${dia}/${mes}/${ano.slice(-2)}`;
 }
 
 function popularFiltros(dados) {

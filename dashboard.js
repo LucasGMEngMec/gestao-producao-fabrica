@@ -279,6 +279,7 @@ function montarTabelaDetalhe(dados) {
             <th style="padding:10px;">Descrição</th>
             <th style="padding:10px; text-align:right;">Quantidade</th>
             <th style="padding:10px; text-align:right;">Peso (kg)</th>
+            <th style="padding:10px; text-align:right;">Usuário</th>
           </tr>
         </thead>
         <tbody>

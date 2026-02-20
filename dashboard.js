@@ -42,7 +42,6 @@ async function carregarDados() {
   }
 
   processarDados(data);
-  popularFiltros(data);
 }
 
 /* ================= PROCESSAMENTO ================= */
@@ -125,6 +124,21 @@ function atualizarTotal(id, lista) {
 
 function formatarMil(valor) {
   return (valor / 1000).toFixed(2) + " Mil";
+}
+
+/* ================= FILTROS ================= */
+async function carregarFiltros() {
+
+  const { data, error } = await supabaseClient
+    .from("vw_producao_kg")
+    .select("*");
+
+  if (error) {
+    console.error("Erro ao carregar filtros:", error);
+    return;
+  }
+
+  popularFiltros(data);
 }
 
 /* ================= GRÁFICOS ================= */
@@ -232,5 +246,6 @@ function popularFiltros(dados) {
 
 /* ================= INICIALIZA ================= */
 window.onload = () => {
+  carregarFiltros();
   carregarDados();
 };

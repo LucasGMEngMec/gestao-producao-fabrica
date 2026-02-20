@@ -300,6 +300,7 @@ function montarTabelaDetalhe(dados) {
           ${Number(d.peso_kg).toFixed(2)}
         </td>
       </tr>
+      <td style="padding:8px;">${d.usuario_nome || ""}</td>
     `;
   });
 
@@ -451,6 +452,8 @@ async function gerarExcel() {
   // formatação das colunas
   const dadosFormatados = data.map(item => ({
     Data: item.data,
+    Fábrica: item.fabrica,
+    Fornecedor: item.fornecedor,
     Obra: item.obra,
     Instalação: item.instalacao,
     Estrutura: item.estrutura,
@@ -458,7 +461,8 @@ async function gerarExcel() {
     Descrição: item.descricao,
     Processo: item.processo,
     Quantidade: item.quantidade,
-    "Peso (kg)": item.peso_kg
+    "Peso (kg)": item.peso_kg,
+    Usuário: item.usuario_nome
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);

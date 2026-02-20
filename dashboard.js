@@ -127,14 +127,24 @@ function formatarMil(valor) {
 }
 
 /* ================= FILTROS ================= */
-async function carregarFiltros() {
+async function atualizarFiltros() {
 
-  const { data, error } = await supabaseClient
+  let query = supabaseClient
     .from("vw_producao_kg")
     .select("*");
 
+  // aplica filtros já escolhidos
+  camposFiltro.forEach(campo => {
+    const valor = document.getElementById(campo)?.value;
+    if (valor) {
+      query = query.eq(campo, valor);
+    }
+  });
+
+  const { data, error } = await query;
+
   if (error) {
-    console.error("Erro ao carregar filtros:", error);
+    console.error("Erro ao atualizar filtros:", error);
     return;
   }
 
@@ -333,6 +343,8 @@ function popularFiltros(dados) {
     const select = document.getElementById(campo);
     if (!select) return;
 
+    const valorAtual = select.value;
+
     const valoresUnicos = [
       ...new Set(
         dados
@@ -343,10 +355,15 @@ function popularFiltros(dados) {
 
     select.innerHTML = '<option value="">Todos</option>';
 
-    valoresUnicos.forEach(valor => {
+    valoresUnicos.sort().forEach(valor => {
       const option = document.createElement("option");
       option.value = valor;
       option.textContent = valor;
+
+      if (valor === valorAtual) {
+        option.selected = true;
+      }
+
       select.appendChild(option);
     });
 
@@ -355,6 +372,13 @@ function popularFiltros(dados) {
 
 /* ================= INICIALIZA ================= */
 window.onload = () => {
-  carregarFiltros();
+  atualizarFiltros();
   carregarDados();
 };
+
+camposFiltro.forEach(campo => {
+  const select = document.getElementById(campo);
+  if (select) {
+    select.addEventListener("change", atualizarFiltros);
+  }
+});

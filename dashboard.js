@@ -78,11 +78,8 @@ function atualizarDashboard(dados) {
   const datasBrutas = Object.keys(dados);
 
   const datasFormatadas = datasBrutas.map(d => {
-    const dt = new Date(d);
-    const dia = String(dt.getDate()).padStart(2, '0');
-    const mes = String(dt.getMonth() + 1).padStart(2, '0');
-    const ano = String(dt.getFullYear()).slice(-2);
-    return `${dia}/${mes}/${ano}`;
+    const [ano, mes, dia] = d.split("-");
+    return `${dia}/${mes}/${ano.slice(-2)}`;
   });
 
   const pintura = [];

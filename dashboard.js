@@ -463,6 +463,7 @@ async function gerarExcel() {
     Processo: item.processo,
     Quantidade: item.quantidade,
     "Peso (kg)": item.peso_kg,
+    Equipe: item.equipe,
     Usuário: item.usuario_nome
   }));
 

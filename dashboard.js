@@ -213,6 +213,10 @@ function fecharFiltro() {
   document.getElementById("modalFiltro").style.display = "none";
 }
 
+function fecharDetalhe() {
+  document.getElementById("modalDetalhe").style.display = "none";
+}
+
 async function abrirDetalhe(processo) {
 
   const processoFormatado =
@@ -294,7 +298,7 @@ function montarTabelaDetalhe(dados) {
       </table>
 
       <div style="margin-top:20px; text-align:right;">
-        <button onclick="fecharFiltro()" style="
+        <button onclick="fecharDetalhe()" style="
           padding:8px 18px;
           border:none;
           border-radius:6px;

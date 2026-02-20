@@ -215,31 +215,22 @@ function fecharFiltro() {
 
 async function abrirDetalhe(processo) {
 
-  const inicio = document.getElementById("dataInicio").value;
-  const fim = document.getElementById("dataFim").value;
+  const processoFormatado =
+    processo.charAt(0).toUpperCase() + processo.slice(1);
 
   let query = supabaseClient
     .from("vw_producao_kg")
     .select("*")
-    .eq("processo", processo);
-
-  if (inicio) query = query.gte("data", inicio);
-  if (fim) query = query.lte("data", fim);
-
-  camposFiltro.forEach((campo) => {
-    const valor = document.getElementById(campo)?.value;
-    if (valor) {
-      query = query.eq(campo, valor);
-    }
-  });
+    .ilike("processo", processoFormatado);
 
   const { data, error } = await query;
 
   if (error) {
     console.error(error);
-    alert("Erro ao buscar detalhes.");
     return;
   }
+
+  console.log("Dados detalhe:", data); // para teste
 
   montarTabelaDetalhe(data);
 }

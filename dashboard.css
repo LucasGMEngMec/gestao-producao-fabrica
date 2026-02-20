@@ -220,3 +220,8 @@ canvas {
 .btn-pdf:hover {
   background: #a8242a;
 }
+
+.logo-bdr img {
+  height: 70px;
+  margin-top: 40px;
+}

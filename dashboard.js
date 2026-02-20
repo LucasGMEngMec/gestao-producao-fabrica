@@ -156,26 +156,26 @@ function criarGrafico(id, labels, valores) {
           font: { weight: "bold", size: 12 },
           formatter: (value) => {
             if (!value || value === 0) return "";
-            return (value / 1000).toFixed(2) + "Mil";
-         }
-        },
-      scales: {
-        x: { 
-           grid: { display: false },
-            ticks: {
-              maxRotation: 45,
-              minRotation: 45,
-              autoSkip: false
-            }
-          },
-
-        y: {
-          beginAtZero: true,
-          display: false,
-          grid: { display: false }
+            return (value / 1000).toFixed(2) + " Mil";
+          }
         }
       }
-    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          autoSkip: false
+        }
+      },
+     y: {
+        beginAtZero: true,
+        display: false,
+        grid: { display: false }
+      }
+    }
+  }
     plugins: [ChartDataLabels]
   });
 }

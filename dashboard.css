@@ -13,7 +13,7 @@ body {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 2px;
   gap: 20px;
 }
 

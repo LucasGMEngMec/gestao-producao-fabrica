@@ -396,9 +396,9 @@ async function gerarPDF() {
 
   const imgData = canvas.toDataURL("image/png");
 
-  const pdf = new jsPDF("p", "mm", "a4");
+  const pdf = new jsPDF("l", "mm", "a4");
 
-  const larguraPDF = 210;
+  const larguraPDF = 297;
   const alturaPDF = (canvas.height * larguraPDF) / canvas.width;
 
   pdf.addImage(imgData, "PNG", 0, 0, larguraPDF, alturaPDF);

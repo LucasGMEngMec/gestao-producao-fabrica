@@ -149,6 +149,11 @@ function criarGrafico(id, labels, valores) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 40
+        }
+      },
       plugins: {
         legend: { display: false },
         datalabels: {

@@ -61,6 +61,7 @@ body {
   border-radius: 8px;
   border: 1px solid #ddd;
   background: #fff;
+  margin-bottom: 5px;
 }
 
 .filtro button {
@@ -78,17 +79,13 @@ body {
   transform: scale(1.03);
 }
 
-.filtro input {
-  margin-bottom: 5px;
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 
-.destaque {
+.grid .card:first-child{
   grid-column: span 2;
   height: 240px;
 }
@@ -112,7 +109,7 @@ body {
   font-size: 18px;
 }
 
-.entrega {
+.grid .card:last-child {
   grid-column: span 2;
 }
 

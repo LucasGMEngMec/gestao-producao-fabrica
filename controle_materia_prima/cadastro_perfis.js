@@ -191,3 +191,8 @@ async function colarExcel() {
 window.onload = function() {
     adicionarLinha();
 };
+
+window.onload = function () {
+    formatarDataHoje();
+    adicionarLinha();
+};

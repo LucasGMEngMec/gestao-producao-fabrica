@@ -13,11 +13,11 @@ function adicionarLinha() {
     const row = tabela.insertRow();
 
     row.innerHTML = `
-        <td><input type="text" class="descricao" value="${colunas[0] || ''}"></td>
-        <td><input type="text" class="perfil" value="${colunas[1] || ''}"></td>
-        <td><input type="number" class="comprimento" value="${colunas[2] || ''}"></td>
-        <td><input type="number" step="0.001" class="peso" value="${colunas[3] || ''}"></td>
-        <td><input type="number" class="desenvolvimento" value="${colunas[4] || ''}"></td>
+        <td><input type="text" class="descricao"></td>
+        <td><input type="text" class="perfil"></td>
+        <td><input type="number" class="comprimento"></td>
+        <td><input type="number" step="0.001" class="peso"></td>
+        <td><input type="number" class="desenvolvimento"></td>
         <td style="text-align:center;">
             <button class="btn-vermelho" onclick="removerLinha(this)">🗑</button>
         </td>
@@ -70,23 +70,18 @@ function normalizarPerfil(perfil) {
 async function validarTabela() {
     let valido = true;
     const linhas = tabela.querySelectorAll("tr");
-    const perfisDigitados = [];
 
     linhas.forEach(row => {
         row.style.backgroundColor = "";
-        const descricao = row.querySelector(".descricao").value;
 
-        if (!descricao){
-            row.style.backgroundColor = "#ffcccc";
-            valido = false;
-        }
+        const descricao = row.querySelector(".descricao").value;
         const perfil = normalizarPerfil(row.querySelector(".perfil").value);
         const comprimento = row.querySelector(".comprimento").value;
         const peso = row.querySelector(".peso").value;
         const desenvolvimento = row.querySelector(".desenvolvimento").value;
         const tipo = verificarTipoPerfil(perfil);
 
-        if (!perfil || !comprimento || !peso) {
+        if (!descricao || !perfil || !comprimento || !peso) {
             row.style.backgroundColor = "#ffcccc";
             valido = false;
         }
@@ -95,14 +90,6 @@ async function validarTabela() {
             row.style.backgroundColor = "#ffcccc";
             valido = false;
         }
-
-        perfis.push({
-            descricao,
-            perfil,
-            comprimento_mm: comprimento,
-            peso_kg_m: peso,
-            desenvolvimento_mm: desenvolvimento}
-        );
     });
 
     btnFinalizar.disabled = !valido;

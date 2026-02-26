@@ -1,6 +1,6 @@
 const supabase = window.supabase.createClient(
-    "SUA_URL_SUPABASE",
-    "SUA_CHAVE_PUBLICA"
+    "https://dklmejmlovtcadlicnhu.supabase.co",
+    "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
 );
 
 const tabela = document.querySelector("#tabelaPerfis tbody");
@@ -188,11 +188,7 @@ async function colarExcel() {
 }
 
 // Cria primeira linha automaticamente ao abrir
-window.onload = function() {
-    adicionarLinha();
-};
-
-window.onload = function () {
+window.addEventListener("DOMContentLoaded", function () {
     formatarDataHoje();
     adicionarLinha();
-};
+});

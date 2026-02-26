@@ -6,6 +6,16 @@ const supabase = window.supabase.createClient(
 const tabela = document.querySelector("#tabelaPerfis tbody");
 const btnFinalizar = document.getElementById("btnFinalizar");
 
+function formatarDataHoje() {
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const ano = hoje.getFullYear();
+    document.getElementById("dataCadastro").value = `${dia}/${mes}/${ano}`;
+}
+
+formatarDataHoje();
+
 function adicionarLinha() {
     const row = tabela.insertRow();
 
@@ -14,7 +24,9 @@ function adicionarLinha() {
         <td><input type="number" class="comprimento"></td>
         <td><input type="number" step="0.001" class="peso"></td>
         <td><input type="number" class="desenvolvimento"></td>
-        <td><button class="btn-vermelho" onclick="removerLinha(this)">🗑</button></td>
+        <td style="text-align:center;">
+            <button class="btn-vermelho" onclick="removerLinha(this)">🗑</button>
+        </td>
     `;
 
     adicionarEventos(row);
@@ -174,3 +186,8 @@ async function colarExcel() {
 
     validarTabela();
 }
+
+// Cria primeira linha automaticamente ao abrir
+window.onload = function() {
+    adicionarLinha();
+};

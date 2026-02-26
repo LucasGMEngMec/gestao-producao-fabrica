@@ -1,8 +1,3 @@
-const supabase = window.supabase.createClient(
-    "https://dklmejmlovtcadlicnhu.supabase.co",
-    "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
-);
-
 const tabela = document.querySelector("#tabelaPerfis tbody");
 const btnFinalizar = document.getElementById("btnFinalizar");
 
@@ -13,8 +8,6 @@ function formatarDataHoje() {
     const ano = hoje.getFullYear();
     document.getElementById("dataCadastro").value = `${dia}/${mes}/${ano}`;
 }
-
-formatarDataHoje();
 
 function adicionarLinha() {
     const row = tabela.insertRow();
@@ -99,95 +92,9 @@ async function validarTabela() {
         perfisDigitados.push(perfil);
     });
 
-    // duplicidade interna
-    const duplicados = perfisDigitados.filter((item, index) =>
-        perfisDigitados.indexOf(item) !== index
-    );
-
-    if (duplicados.length > 0) {
-        linhas.forEach(row => {
-            const perfil = normalizarPerfil(row.querySelector(".perfil").value);
-            if (duplicados.includes(perfil)) {
-                row.style.backgroundColor = "#ff9999";
-            }
-        });
-        valido = false;
-    }
-
-    // duplicidade banco
-    if (perfisDigitados.length > 0) {
-        const { data } = await supabase
-            .from("materiais")
-            .select("perfil")
-            .in("perfil", perfisDigitados);
-
-        if (data && data.length > 0) {
-            linhas.forEach(row => {
-                const perfil = normalizarPerfil(row.querySelector(".perfil").value);
-                if (data.some(p => p.perfil === perfil)) {
-                    row.style.backgroundColor = "#ff9999";
-                }
-            });
-            valido = false;
-        }
-    }
-
     btnFinalizar.disabled = !valido;
 }
 
-async function salvarPerfis() {
-    const linhas = tabela.querySelectorAll("tr");
-    const perfis = [];
-
-    linhas.forEach(row => {
-        const perfil = normalizarPerfil(row.querySelector(".perfil").value);
-        const comprimento = parseInt(row.querySelector(".comprimento").value);
-        const peso = parseFloat(row.querySelector(".peso").value);
-        const desenvolvimento = row.querySelector(".desenvolvimento").disabled
-            ? null
-            : parseFloat(row.querySelector(".desenvolvimento").value);
-
-        perfis.push({
-            perfil,
-            comprimento_mm: comprimento,
-            peso_kg_m: peso,
-            desenvolvimento_mm: desenvolvimento
-        });
-    });
-
-    const { error } = await supabase.from("materiais").insert(perfis);
-
-    if (error) {
-        alert("Erro ao salvar: " + error.message);
-    } else {
-        alert("Perfis cadastrados com sucesso!");
-        location.reload();
-    }
-}
-
-async function colarExcel() {
-    const texto = await navigator.clipboard.readText();
-    const linhas = texto.trim().split("\n");
-
-    linhas.forEach(linha => {
-        const colunas = linha.split("\t");
-        const row = tabela.insertRow();
-
-        row.innerHTML = `
-            <td><input type="text" class="perfil" value="${colunas[0] || ''}"></td>
-            <td><input type="number" class="comprimento" value="${colunas[1] || ''}"></td>
-            <td><input type="number" step="0.001" class="peso" value="${colunas[2] || ''}"></td>
-            <td><input type="number" class="desenvolvimento" value="${colunas[3] || ''}"></td>
-            <td><button onclick="removerLinha(this)">🗑</button></td>
-        `;
-
-        adicionarEventos(row);
-    });
-
-    validarTabela();
-}
-
-// Cria primeira linha automaticamente ao abrir
 window.addEventListener("DOMContentLoaded", function () {
     formatarDataHoje();
     adicionarLinha();

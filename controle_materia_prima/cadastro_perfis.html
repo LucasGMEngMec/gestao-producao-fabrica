@@ -91,26 +91,37 @@ td input:disabled {
 
 /* Botões padrão iguais ao módulo */
 .btn-azul {
-    background: #1976d2;
+    background: #1f77d0;
     color: white;
     border: none;
-    padding: 7px 12px;
+    padding: 7px 14px;
     cursor: pointer;
+    font-weight: 500;
 }
 
-.btn-verde {
-    background: #2e7d32;
+.btn-excel {
+    background: #1b9e77;
     color: white;
     border: none;
-    padding: 7px 12px;
+    padding: 7px 14px;
     cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-finalizar {
+    background: #2ca02c;
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-weight: 500;
 }
 
 .btn-vermelho {
-    background: #c62828;
+    background: #cc0000;
     color: white;
     border: none;
-    padding: 5px 9px;
+    padding: 5px 10px;
     cursor: pointer;
 }
 
@@ -156,8 +167,14 @@ td input:disabled {
         <br>
 
         <button class="btn-azul" onclick="adicionarLinha()">+ Linha</button>
-        <button class="btn-verde" onclick="colarExcel()">Colar do Excel</button>
-        <button id="btnFinalizar" class="btn-verde btn-desabilitado" onclick="salvarPerfis()" disabled>Finalizar</button>
+
+        <button class="btn-excel" onclick="colarExcel()">
+            📋 Colar do Excel
+        </button>
+
+        <button id="btnFinalizar" class="btn-finalizar btn-desabilitado" onclick="salvarPerfis()" disabled>
+            Finalizar
+        </button>
 
     </div>
 

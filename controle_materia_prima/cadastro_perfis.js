@@ -93,6 +93,12 @@ async function validarTabela() {
     });
 
     btnFinalizar.disabled = !valido;
+
+    if (valido) {
+        btnFinalizar.classList.remove("btn-desabilitado");
+    } else {
+        btnFinalizar.classList.add("btn-desabilitado");
+    }
 }
 
 window.addEventListener("DOMContentLoaded", function () {

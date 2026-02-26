@@ -14,7 +14,7 @@ function adicionarLinha() {
         <td><input type="number" class="comprimento"></td>
         <td><input type="number" step="0.001" class="peso"></td>
         <td><input type="number" class="desenvolvimento"></td>
-        <td><button onclick="removerLinha(this)">🗑</button></td>
+        <td><button class="btn-vermelho" onclick="removerLinha(this)">🗑</button></td>
     `;
 
     adicionarEventos(row);

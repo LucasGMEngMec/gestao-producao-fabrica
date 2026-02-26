@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Cadastro de Perfis</title>
+<link rel="stylesheet" href="../dashboard.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+<h2>Cadastro de Perfis</h2>
+
+<div class="tabela-container">
+<table id="tabelaPerfis">
+    <thead>
+        <tr>
+            <th>Perfil</th>
+            <th>Comprimento (mm)</th>
+            <th>Peso (kg/m)</th>
+            <th>Desenvolvimento (mm)</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+</div>
+
+<br>
+
+<button onclick="adicionarLinha()">+ Linha</button>
+<button onclick="colarExcel()">Colar do Excel</button>
+<button id="btnFinalizar" onclick="salvarPerfis()" disabled>Finalizar</button>
+
+<script src="cadastro_perfis.js"></script>
+</body>
+</html>

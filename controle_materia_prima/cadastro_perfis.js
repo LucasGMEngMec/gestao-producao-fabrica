@@ -150,6 +150,53 @@ async function colarExcel() {
     }
 }
 
+async function salvarPerfis() {
+
+    const linhas = tabela.querySelectorAll("tr");
+    const perfis = [];
+
+    linhas.forEach(row => {
+
+        const descricao = row.querySelector(".descricao").value.trim();
+        const perfil = normalizarPerfil(row.querySelector(".perfil").value);
+        const comprimento = parseFloat(row.querySelector(".comprimento").value);
+        const peso = parseFloat(row.querySelector(".peso").value);
+        const desenvolvimentoInput = row.querySelector(".desenvolvimento");
+
+        const desenvolvimento = desenvolvimentoInput.disabled
+            ? null
+            : parseFloat(desenvolvimentoInput.value);
+
+        perfis.push({
+            descricao,
+            perfil,
+            comprimento_mm: comprimento,
+            peso_kg_m: peso,
+            desenvolvimento_mm: desenvolvimento
+        });
+
+    });
+
+    try {
+
+        const { error } = await supabase
+            .from("materiais")
+            .insert(perfis);
+
+        if (error) {
+            alert("Erro ao salvar: " + error.message);
+            console.error(error);
+        } else {
+            alert("Perfis cadastrados com sucesso!");
+            location.reload();
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Erro inesperado ao salvar.");
+    }
+}
+
 window.addEventListener("DOMContentLoaded", function () {
     formatarDataHoje();
     adicionarLinha();

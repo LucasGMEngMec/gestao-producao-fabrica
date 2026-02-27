@@ -1,6 +1,13 @@
 const tabela = document.querySelector("#tabelaPerfis tbody");
 const btnFinalizar = document.getElementById("btnFinalizar");
 
+const { createClient } = supabase;
+
+const supabaseClient = createClient(
+    "https://dklmejmlovtcadlicnhu.supabase.co",
+    "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
 function formatarDataHoje() {
     const hoje = new Date();
     const dia = String(hoje.getDate()).padStart(2, '0');
@@ -179,7 +186,7 @@ async function salvarPerfis() {
 
     try {
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from("materiais")
             .insert(perfis);
 

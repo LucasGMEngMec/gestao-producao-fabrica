@@ -101,6 +101,41 @@ async function validarTabela() {
     }
 }
 
+async function colarExcel() {
+    try {
+        const texto = await navigator.clipboard.readText();
+
+        if (!texto) return;
+
+        const linhas = texto.trim().split("\n");
+
+        linhas.forEach(linha => {
+            const colunas = linha.split("\t");
+
+            const row = tabela.insertRow();
+
+            row.innerHTML = `
+                <td><input type="text" class="descricao" value="${colunas[0] || ''}"></td>
+                <td><input type="text" class="perfil" value="${colunas[1] || ''}"></td>
+                <td><input type="number" class="comprimento" value="${colunas[2] || ''}"></td>
+                <td><input type="number" step="0.001" class="peso" value="${colunas[3] || ''}"></td>
+                <td><input type="number" class="desenvolvimento" value="${colunas[4] || ''}"></td>
+                <td style="text-align:center;">
+                    <button class="btn-vermelho" onclick="removerLinha(this)">🗑</button>
+                </td>
+            `;
+
+            adicionarEventos(row);
+        });
+
+        validarTabela();
+
+    } catch (err) {
+        alert("Não foi possível acessar a área de transferência. Use Ctrl+C antes de clicar em Colar.");
+        console.error(err);
+    }
+}
+
 window.addEventListener("DOMContentLoaded", function () {
     formatarDataHoje();
     adicionarLinha();

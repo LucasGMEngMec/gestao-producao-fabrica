@@ -106,25 +106,25 @@ async function colarExcel() {
         const texto = await navigator.clipboard.readText();
         if (!texto) return;
 
-        const linhas = texto.trim().split("\n");
+        const linhas = texto.trim().split(/\r?\n/);
 
         linhas.forEach(linha => {
             const colunas = linha.split("\t");
 
-            const descricao = colunas[0] ? colunas[0].trim() : "";
-            const perfil = colunas[1] ? colunas[1].trim() : "";
-            const comprimento = colunas[2] ? colunas[2].trim() : "";
-
-            let peso = "";
-            let desenvolvimento = "";
-
-            if (colunas.length >= 4) {
-                peso = colunas[3].replace(",", ".");
+            function limpar(valor) {
+                if (!valor) return "";
+                return valor
+                    .replace(",", ".")
+                    .replace(/\r/g, "")
+                    .replace(/\n/g, "")
+                    .trim();
             }
 
-            if (colunas.length >= 5) {
-                desenvolvimento = colunas[4].replace(",", ".");
-            }
+            const descricao = limpar(colunas[0]);
+            const perfil = limpar(colunas[1]);
+            const comprimento = limpar(colunas[2]);
+            const peso = limpar(colunas[3]);
+            const desenvolvimento = limpar(colunas[4]);
 
             const row = tabela.insertRow();
 

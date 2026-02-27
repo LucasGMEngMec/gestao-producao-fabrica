@@ -1,6 +1,14 @@
 const tabela = document.querySelector("#tabelaPerfis tbody");
 const btnFinalizar = document.getElementById("btnFinalizar");
 
+/* ================= SUPABASE ================= */
+const { createClient } = supabase;
+
+const supabaseClient = createClient(
+  "https://dklmejmlovtcadlicnhu.supabase.co",
+  "sb_publishable_cpq_meWiczl3c9vpmtKj0w_QOAzH2At"
+);
+
 function formatarDataHoje() {
     const hoje = new Date();
     const dia = String(hoje.getDate()).padStart(2, '0');

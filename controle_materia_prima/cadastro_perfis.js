@@ -111,13 +111,20 @@ async function colarExcel() {
         linhas.forEach(linha => {
             const colunas = linha.split("\t");
 
-            const descricao = colunas[0] || "";
-            const perfil = colunas[1] || "";
-            const comprimento = colunas[2] || "";
+            const descricao = colunas[0] ? colunas[0].trim() : "";
+            const perfil = colunas[1] ? colunas[1].trim() : "";
+            const comprimento = colunas[2] ? colunas[2].trim() : "";
 
-            // CONVERSÃO DE VÍRGULA PARA PONTO
-            const peso = colunas[3] ? colunas[3].replace(",", ".") : "";
-            const desenvolvimento = colunas[4] ? colunas[4].replace(",", ".") : "";
+            let peso = "";
+            let desenvolvimento = "";
+
+            if (colunas.length >= 4) {
+                peso = colunas[3].replace(",", ".");
+            }
+
+            if (colunas.length >= 5) {
+                desenvolvimento = colunas[4].replace(",", ".");
+            }
 
             const row = tabela.insertRow();
 

@@ -75,13 +75,21 @@ function normalizarPerfil(perfil) {
 }
 
 async function validarTabela() {
+
     let valido = true;
     const linhas = tabela.querySelectorAll("tr");
 
-    linhas.forEach(row => {
-        row.style.backgroundColor = "";
+    // limpa marcações anteriores
+    linhas.forEach(row => row.style.backgroundColor = "");
 
-        const descricao = row.querySelector(".descricao").value;
+    const perfisDigitados = [];
+
+    // =============================
+    // VALIDAÇÃO BÁSICA + DUPLICIDADE INTERNA
+    // =============================
+    linhas.forEach(row => {
+
+        const descricao = row.querySelector(".descricao").value.trim();
         const perfil = normalizarPerfil(row.querySelector(".perfil").value);
         const comprimento = row.querySelector(".comprimento").value;
         const peso = row.querySelector(".peso").value;
@@ -97,8 +105,52 @@ async function validarTabela() {
             row.style.backgroundColor = "#ffcccc";
             valido = false;
         }
+
+        perfisDigitados.push(perfil);
     });
 
+    // verifica duplicidade interna
+    const duplicadosInternos = perfisDigitados.filter((item, index) =>
+        perfisDigitados.indexOf(item) !== index
+    );
+
+    if (duplicadosInternos.length > 0) {
+        linhas.forEach(row => {
+            const perfil = normalizarPerfil(row.querySelector(".perfil").value);
+            if (duplicadosInternos.includes(perfil)) {
+                row.style.backgroundColor = "#ff9999";
+            }
+        });
+        valido = false;
+    }
+
+    // =============================
+    // DUPLICIDADE NO BANCO
+    // =============================
+    if (perfisDigitados.length > 0) {
+
+        const { data } = await supabaseClient
+            .from("materiais")
+            .select("perfil")
+            .in("perfil", perfisDigitados);
+
+        if (data && data.length > 0) {
+
+            linhas.forEach(row => {
+                const perfil = normalizarPerfil(row.querySelector(".perfil").value);
+
+                if (data.some(p => p.perfil === perfil)) {
+                    row.style.backgroundColor = "#ff9999";
+                }
+            });
+
+            valido = false;
+        }
+    }
+
+    // =============================
+    // CONTROLE DO BOTÃO
+    // =============================
     btnFinalizar.disabled = !valido;
 
     if (valido) {

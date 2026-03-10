@@ -62,7 +62,7 @@ function adicionarEventos(row) {
 
 function verificarTipoPerfil(perfil) {
     perfil = perfil.toUpperCase().trim();
-    const laminados = ["W", "HP", "L", "BR", "CH", "TUBO"];
+    const laminados = ["W", "HP", "L", "BR", "B. ROS.", "CH", "TUBO"];
 
     for (let prefixo of laminados) {
         if (perfil.startsWith(prefixo)) return "laminado";

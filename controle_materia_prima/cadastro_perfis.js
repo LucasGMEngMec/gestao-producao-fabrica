@@ -179,8 +179,8 @@ async function colarExcel() {
                     .trim();
             }
 
-            const descricao = limpar(colunas[0]);
-            const perfil = limpar(colunas[1]);
+            const descricao = escaparHTML(limpar(colunas[0]));
+            const perfil = escaparHTML(limpar(colunas[1]));
             const comprimento = limpar(colunas[2]);
             const peso = limpar(colunas[3]);
             const desenvolvimento = limpar(colunas[4]);
@@ -254,6 +254,14 @@ async function salvarPerfis() {
         console.error(err);
         alert("Erro inesperado ao salvar.");
     }
+}
+
+function escaparHTML(texto) {
+    if (!texto) return "";
+    return texto
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 window.addEventListener("DOMContentLoaded", function () {

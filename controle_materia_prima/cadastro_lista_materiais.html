@@ -1,3 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Cadastro de Lista de Materiais</title>
+
+<link rel="stylesheet" href="../dashboard.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+</head>
+
+<body>
+
 <h2>Cadastro de Lista de Materiais</h2>
 
 <div class="bloco">
@@ -32,19 +49,19 @@
 
 <div class="tabela-container">
 
-<table id="tabelaMateriais">
+<table id="tabelaMateriais" style="table-layout: fixed;">
 
 <thead>
 <tr>
 
-<th>Marca</th>
-<th>Qtd</th>
-<th>Material</th>
-<th>Perfil</th>
-<th>Comp. (mm)</th>
-<th>Peso Unit. (kg)</th>
-<th>Peso Total (kg)</th>
-<th>Ação</th>
+<th style="width:120px">Marca</th>
+<th style="width:70px">Qtd</th>
+<th style="width:180px">Material</th>
+<th style="width:160px">Perfil</th>
+<th style="width:120px">Comp. (mm)</th>
+<th style="width:140px">Peso Unit. (kg)</th>
+<th style="width:140px">Peso Total (kg)</th>
+<th style="width:60px">Ação</th>
 
 </tr>
 </thead>
@@ -62,3 +79,8 @@
 </div>
 
 <script src="cadastro_lista_materiais.js"></script>
+
+</div>
+
+</body>
+</html>

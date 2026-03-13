@@ -48,7 +48,9 @@
 
 <div class="tabela-container">
 
-<table id="tabelaMateriais" style="table-layout: fixed;">
+<div class="tabela-scroll">
+
+<table id="tabelaMateriais">
 
 <thead>
 <tr>
@@ -69,10 +71,14 @@
 
 </table>
 
+</div>
+
 <br>
 
 <button class="btn-azul" onclick="adicionarLinha()">+ Linha</button>
 <button class="btn-excel" onclick="colarExcel()">📋 Colar do Excel</button>
 <button id="btnFinalizar" class="btn-finalizar btn-desabilitado" disabled onclick="salvarLista()">Finalizar</button>
+
+</div>
 
 </html>
